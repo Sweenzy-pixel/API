@@ -1,0 +1,49 @@
+/* Sidebar Links */
+.sidebar a {
+    display: block;
+    padding: 12px 20px;
+    color: #fff;
+    text-decoration: none;   
+    font-size: 16px;
+    transition: background 0.3s, padding-left 0.3s;
+}
+
+.sidebar a:hover {
+    background: #819067;
+    padding-left: 30px;
+}
+
+/* Hamburger Menu */
+.menu-btn {
+    font-size: 28px;
+    cursor: pointer;
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    color: #333;
+    z-index: 2000;
+}
+
+/* Sidebar Responsiveness */
+@media screen and (max-width: 768px) {
+    .sidebar {
+        width: 70%;   
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .sidebar {
+        width: 85%;
+    }
+
+    .menu-btn {
+        font-size: 24px;
+        top: 10px;
+        left: 10px;
+    }
+
+    .sidebar a {
+        font-size: 14px;
+        padding: 10px 15px;
+    }
+}

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Home</title>
+  <link rel="stylesheet" th:href="@{/assets/css/home.css}">
+  <link rel="stylesheet" th:href="@{/assets/css/sidebar.css}">
+  <script th:src="@{/assets/js/sidebar.js}" defer></script>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow-y: auto; 
+      font-family: Arial, sans-serif;
+      background-color: #96A78D;
+    }
+
+    .news-container {
+  margin: 20px auto;
+  max-width: 1200px;
+  padding: 20px;
+}
+
+.news-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 20px;
+}
+
+.news-item {
+  background: #F0F0F0;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+  text-align: left;
+}
+
+.news-item h3 {
+  margin: 10px 0;
+  color: #333;
+  font-size: 18px;
+}
+
+.news-item p {
+  margin: 0 0 8px 0;
+  color: #555;
+}
+
+.news-item a {
+  color: #96A78D;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.news-item a:hover {
+  text-decoration: underline;
+}
+
+.news-img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+
+  </style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <div id="sidebar" class="sidebar">
+    <a href="javascript:void(0)" class="closebtn" onclick="closeSidebar()">&times;</a>
+    <a th:href="@{/}">Logout</a>
+    <a th:href="@{/contact}">Contact Us</a>
+    <a th:href="@{/about}">About Us</a>
+  </div>
+
+  <!-- Hamburger Menu -->
+  <span id="menuBtn" class="menu-btn" onclick="openSidebar()">&#9776;</span>
+
+  <!-- News Section -->
+  <div class="news-container">
+  <h2>Latest WSJ News</h2>
+  <div class="news-grid">
+    <div th:each="article : ${articles}" class="news-item">
+      <img th:if="${article.imageUrl != null}" th:src="${article.imageUrl}" 
+           alt="News Image" class="news-img"/>
+      <h3 th:text="${article.title}"></h3>
+      <p th:text="${article.description}"></p>
+      <small th:text="${article.publishedAt}"></small><br/>
+      <a th:href="${article.url}" target="_blank">Read more</a>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
