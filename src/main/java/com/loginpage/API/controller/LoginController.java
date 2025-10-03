@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import com.loginpage.API.service.CaptchaService;
 
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -25,6 +26,9 @@ public class LoginController {
     @Autowired
     private NewsService newsService;
 
+    @Autowired
+    private CaptchaService captchaService;
+
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     // ------------------- LOGIN -------------------
@@ -34,21 +38,33 @@ public class LoginController {
         return "login";
     }
 
-    @PostMapping("/")
-    public String processLogin(@ModelAttribute("loginForm") LoginForm form, Model model) {
-        return userRepository.findByUsername(form.getUsername())
-                .map(user -> {
-                    if (passwordEncoder.matches(form.getPassword(), user.getPassword())) {
-                        return "redirect:/home?success=true";
-                    } else {
-                        model.addAttribute("error", "Invalid password");
-                        return "login";
-                    }
-                })
-                .orElseGet(() -> {
-                    model.addAttribute("error", "User not found");
+    
+   @PostMapping("/")
+public String processLogin(@ModelAttribute("loginForm") LoginForm form,
+                           @RequestParam("g-recaptcha-response") String captchaResponse,
+                           Model model) {
+
+    // ✅ First validate reCAPTCHA
+    if (!captchaService.verifyCaptcha(captchaResponse)) {
+        model.addAttribute("error", "Captcha verification failed. Please try again.");
+        return "login";
+    }
+
+    // ✅ Then validate username & password
+    return userRepository.findByUsername(form.getUsername())
+            .map(user -> {
+                if (passwordEncoder.matches(form.getPassword(), user.getPassword())) {
+                    return "redirect:/home?success=true";
+                } else {
+                    model.addAttribute("error", "Invalid password");
                     return "login";
-                });
+                }
+            })
+            .orElseGet(() -> {
+                model.addAttribute("error", "User not found");
+                return "login";
+            });
+
     }
 
     // ------------------- SIGNUP -------------------

@@ -4,6 +4,8 @@
   <title>Login</title>
   <link rel="stylesheet" th:href="@{/assets/css/login.css}">
   <script th:src="@{/assets/js/login.js}" defer></script>
+  <!-- Google reCAPTCHA script -->
+  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 </head>
 <body>
   <div class="container">
@@ -20,6 +22,11 @@
       <label>Password:</label>
       <input type="password" th:field="*{password}" required>
 
+      <!-- Google reCAPTCHA box -->
+      <div class="g-recaptcha"
+           data-sitekey="6LdLb90rAAAAABLPwE0ioGTfHNZbdKNdxTkzhwKn">
+      </div>
+
       <button type="submit" class="btn">Login</button>
     </form>
 
@@ -32,7 +39,6 @@
       <a th:href="@{/forgot-password}" class="link">Forgot Password?</a>
     </p>
   </div>
-
 
   <input type="hidden" id="loginError" th:value="${error}">
   <input type="hidden" id="loginSuccess" th:value="${param.success}">
