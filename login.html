@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Login</title>
+  <link rel="stylesheet" th:href="@{/assets/css/login.css}">
+  <script th:src="@{/assets/js/login.js}" defer></script>
+</head>
+<body>
+  <div class="container">
+    <h2>Welcome</h2>
+
+    <div th:if="${error}" class="error">
+      <p th:text="${error}"></p>
+    </div>
+
+    <form th:action="@{/}" th:object="${loginForm}" method="post" class="login-form">
+      <label>Username:</label>
+      <input type="text" th:field="*{username}" required>
+
+      <label>Password:</label>
+      <input type="password" th:field="*{password}" required>
+
+      <button type="submit" class="btn">Login</button>
+    </form>
+
+    <p>Don't have an account?</p>
+    <a th:href="@{/signup}">
+      <button type="button" class="btn secondary">Sign Up</button>
+    </a>
+
+    <p>
+      <a th:href="@{/forgot-password}" class="link">Forgot Password?</a>
+    </p>
+  </div>
+
+
+  <input type="hidden" id="loginError" th:value="${error}">
+  <input type="hidden" id="loginSuccess" th:value="${param.success}">
+  <input type="hidden" id="loginRegistered" th:value="${param.registered}">
+</body>
+</html>

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Home</title>
+  <link rel="stylesheet" th:href="@{/assets/css/home.css}">
+  <link rel="stylesheet" th:href="@{/assets/css/sidebar.css}">
+  <script th:src="@{/assets/js/sidebar.js}" defer></script>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow-y: auto; 
+      font-family: Arial, sans-serif;
+      background-color: #F7F7F7;
+    }
+  </style>
+</head>
+<body>
+
+ <!-- Navbar -->
+ <div class="navbar">
+    <div class="nav-links">
+      <a th:href="@{/}">Logout</a>
+      <a th:href="@{/contact}">Contact Us</a>
+      <a th:href="@{/about}">About Us</a>
+    </div>
+
+    <div class="right-side">
+      <div class="search-container">
+        <i>🔍</i>
+        <input type="text" placeholder="Search">
+      </div>
+      <div class="profile">B</div>
+    </div>
+  </div>
+
+ <!-- Gray Featured Bar -->
+<div class="featured-bar">
+  <span><strong>FEATURED:</strong> Tiangco files ethics complaint against Zaldy Co flood control insertions</span>
+</div>
+
+<!-- Carousel (Advertisement replaced) -->
+<div class="carousel-wrapper" th:if="${articles.size() > 0}">
+  <h3>Top Stories</h3>
+  <div class="carousel">
+    <div class="carousel-item" th:each="article, iter : ${articles}" th:if="${iter.index < 5}">
+      <a th:href="${article.url}" target="_blank" class="carousel-link">
+        <img th:if="${article.imageUrl != null}" th:src="${article.imageUrl}" alt="News"/>
+        <p th:text="${article.title}"></p>
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- News Section -->
+<div class="news-container">
+  <h2>News</h2>
+  <div class="news-layout">
+
+    <!-- Featured Article (Left) -->
+    <div class="featured-article" th:if="${articles.size() > 0}">
+      <a th:href="${articles[0].url}" target="_blank" class="news-link">
+        <img th:if="${articles[0].imageUrl != null}" 
+             th:src="${articles[0].imageUrl}" 
+             alt="News" class="featured-img"/>
+        <h3 th:text="${articles[0].title}"></h3>
+      </a>
+    </div>
+
+    <!-- Right Articles -->
+    <div class="right-articles">
+      <div class="right-article" th:each="article, iter : ${articles}" th:if="${iter.index > 0 and iter.index < 3}">
+        <a th:href="${article.url}" target="_blank">
+          <img th:if="${article.imageUrl != null}" th:src="${article.imageUrl}" alt="News"/>
+          <p th:text="${article.title}"></p>
+        </a>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  let index = 0;
+  const items = document.querySelectorAll(".carousel-item");
+  const total = items.length;
+
+  function showSlide(i) {
+    items.forEach((item, idx) => {
+      item.classList.remove("active");
+      if (idx === i) {
+        item.classList.add("active");
+      }
+    });
+  }
+
+  if (total > 0) {
+    setInterval(() => {
+      index = (index + 1) % total;
+      showSlide(index);
+    }, 4000); // change every 4 seconds
+  }
+});
+</script>
+
+</body>
+</html>
