@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Map Uploaded CSV</title>
+    <link rel="stylesheet" th:href="@{/assets/css/home.css}">
+    <style>
+        body{font-family:Arial,Helvetica,sans-serif;background:#f6f6f6;padding:18px}
+        .card{background:#fff;padding:20px;border-radius:10px;max-width:950px;margin:18px auto;box-shadow:0 4px 12px rgba(0,0,0,0.05)}
+        .field-row{display:flex;gap:12px;align-items:center;margin:8px 0;flex-wrap:wrap}
+        select{padding:8px;border-radius:6px;border:1px solid #ccc;min-width:140px}
+        .section-title{font-weight:700;margin-bottom:6px;color:#444}
+        .btn{background:#9EBC8A;color:#fff;padding:10px 16px;border-radius:8px;border:none;cursor:pointer;font-weight:600}
+        .btn.secondary{background:#6c7a61}
+        .message{padding:10px 14px;border-radius:6px;margin-bottom:12px}
+        .message.error{background:#ffe5e5;color:#a00}
+        .message.success{background:#e3f5df;color:#1b5e20}
+        .toolbar{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px;align-items:flex-end}
+    </style>
+</head>
+<body>
+<div class="card">
+    <h2 style="margin-top:0;">Step 2: Map uploaded CSV columns</h2>
+    <p style="color:#555;">Select which CSV column should populate each required field. Apply a saved template to start faster, then fine-tune before importing.</p>
+
+    <div th:if="${error}" class="message error" th:text="${error}"></div>
+    <div th:if="${templateMessage}" class="message success" th:text="${templateMessage}"></div>
+    <div th:if="${templateError}" class="message error" th:text="${templateError}"></div>
+    <div th:if="${templateSelected}" class="message" style="background:#eef2ff;color:#303f9f;">
+        Using template: <span th:text="${templateSelected}"></span>
+    </div>
+
+    <div class="toolbar" th:if="${mappingTemplates != null and mappingTemplates.size() > 0}">
+        <form th:action="@{'/csv/map/' + ${csvFile.id} + '/template/apply'}" method="post" style="display:flex;gap:10px;align-items:flex-end;">
+            <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:13px;color:#555;">Apply template</label>
+                <select name="templateId">
+                    <option value="">Select template</option>
+                    <option th:each="t : ${mappingTemplates}" th:value="${t.id}"
+                            th:selected="${selectedTemplateId != null and selectedTemplateId == t.id}"
+                            th:text="${t.name}"></option>
+                </select>
+            </div>
+            <button type="submit" class="btn">Apply</button>
+            <div th:if="${selectedTemplateId != null}">
+                <a th:href="@{'/csv/template/' + ${selectedTemplateId} + '/download'}" style="text-decoration:none;color:#4a5c7a;font-weight:600;">Download template format</a>
+            </div>
+        </form>
+    </div>
+
+    <div th:if="${csvHeaders != null && csvHeaders.size() > 0}">
+        <div class="section-title">Detected CSV headers:</div>
+        <ul>
+            <li th:each="h : ${csvHeaders}" th:text="${h}"></li>
+        </ul>
+    </div>
+
+    <form id="mappingForm" method="post"
+          th:action="@{'/csv/map/' + ${csvFile.id} + '/import'}"
+          th:attr="data-file-id=${csvFile.id}">
+        <div th:each="target,iterStat : ${targetFields}"
+             th:with="slug=${'field_' + (iterStat.index + 1)}, selection=${mappingUsed != null ? mappingUsed[slug] : ''}">
+            <div class="field-row">
+                <div style="flex:1;min-width:220px;">
+                    <div class="section-title" th:text="${iterStat.index + 1} + '. ' + ${target}"></div>
+                    <div style="color:#666;font-size:12px;">Sample: <span th:text="${sampleBySlug != null ? sampleBySlug[slug] : ''}"></span></div>
+                </div>
+                <div style="min-width:220px;">
+                    <label style="font-size:13px;color:#555;">Your Column Header</label>
+                    <div th:text="${(columnLabels != null and selection != null and columnLabels[selection] != null) ? columnLabels[selection] : ''}" style="color:#333;font-weight:600;"></div>
+                </div>
+                <div style="min-width:200px;">
+                    <label style="font-size:13px;color:#555;">Map to column</label>
+                    <select th:name="${'mapping[' + slug + ']'}" class="mapping-select" th:attr="data-field-slug=${slug}">
+                        <option value="IGNORE" th:selected="${selection != null and selection == 'IGNORE'}">IGNORE</option>
+                        <option value="" th:selected="${selection == null or #strings.isEmpty(selection) or selection == ''}">AUTO</option>
+                        <option th:each="i : ${columnOptions}" th:value="${i}" th:attr="data-column-num=${i}"
+                                th:text="${'Column ' + i + ( (csvHeaders != null and csvHeaders.size() >= i) ? (' - ' + csvHeaders[i-1]) : '') }"
+                                th:selected="${selection != null and !#strings.isEmpty(selection) and selection == i.toString()}"></option>
+                    </select>
+                </div>
+            </div>
+            <hr style="border:none;border-top:1px solid #eee;margin:8px 0;">
+        </div>
+
+        <div style="margin-top:18px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+            <button type="submit" class="btn">Import CSV</button>
+            <input type="text" name="templateName" placeholder="Template name" style="padding:8px;border:1px solid #ccc;border-radius:6px;flex:1;min-width:200px;">
+            <button type="submit" class="btn secondary"
+                    th:formaction="@{'/csv/map/' + ${csvFile.id} + '/template/save'}">Save Mapping as Template</button>
+            <a th:href="@{/csv/template}" style="margin-left:auto;text-decoration:none;color:#4a5c7a;font-weight:600;">Edit Template Defaults</a>
+        </div>
+    </form>
+</div>
+
+<script>
+(function() {
+    'use strict';
+    
+    // Store original options for each select element
+    const originalOptionsMap = new WeakMap();
+    let allSelects = [];
+    
+    // Initialize when DOM is ready
+    function init() {
+        // Get all mapping select elements
+        allSelects = Array.from(document.querySelectorAll('select.mapping-select'));
+        
+        if (allSelects.length === 0) {
+            // Try alternative selector
+            allSelects = Array.from(document.querySelectorAll('form select[name^="mapping["]'));
+        }
+        
+        if (allSelects.length === 0) {
+            console.warn('No mapping select elements found');
+            return;
+        }
+        
+        // Save original options for each select
+        allSelects.forEach(select => {
+            if (!originalOptionsMap.has(select)) {
+                const options = [];
+                for (let i = 0; i < select.options.length; i++) {
+                    const opt = select.options[i];
+                    options.push({
+                        value: opt.value,
+                        text: opt.text,
+                        isColumn: opt.value && opt.value !== 'IGNORE' && opt.value !== 'AUTO' && opt.value !== '' && !isNaN(parseInt(opt.value))
+                    });
+                }
+                originalOptionsMap.set(select, options);
+            }
+        });
+        
+        // Add event listeners
+        allSelects.forEach(select => {
+            select.addEventListener('change', handleSelectChange);
+        });
+        
+        // Initial update
+        updateAllDropdowns();
+    }
+    
+    // Handle select change
+    function handleSelectChange(e) {
+        updateAllDropdowns();
+    }
+    
+    // Get all currently selected column numbers
+    function getSelectedColumns() {
+        const selected = new Map();
+        allSelects.forEach(select => {
+            const val = select.value;
+            if (val && val !== 'IGNORE' && val !== 'AUTO' && val !== '' && !isNaN(parseInt(val))) {
+                selected.set(val, select);
+            }
+        });
+        return selected;
+    }
+    
+    // Update all dropdowns
+    function updateAllDropdowns() {
+        const selectedColumns = getSelectedColumns();
+        
+        allSelects.forEach(select => {
+            const currentValue = select.value;
+            const originalOpts = originalOptionsMap.get(select) || [];
+            
+            // Store current selection
+            const wasSelected = currentValue;
+            
+            // Clear dropdown
+            while (select.options.length > 0) {
+                select.remove(0);
+            }
+            
+            // Rebuild options
+            originalOpts.forEach(optData => {
+                // Always include IGNORE, AUTO, and empty options
+                if (!optData.isColumn) {
+                    const opt = new Option(optData.text, optData.value);
+                    if (optData.value === wasSelected) {
+                        opt.selected = true;
+                    }
+                    select.add(opt);
+                } else {
+                    // For column numbers, check if selected elsewhere
+                    const isSelectedInOther = selectedColumns.has(optData.value) && 
+                                             selectedColumns.get(optData.value) !== select;
+                    
+                    // Only add if not selected elsewhere, OR if it's the current selection
+                    if (!isSelectedInOther || optData.value === wasSelected) {
+                        const opt = new Option(optData.text, optData.value);
+                        if (optData.value === wasSelected) {
+                            opt.selected = true;
+                        }
+                        select.add(opt);
+                    }
+                }
+            });
+        });
+    }
+    
+    // Run initialization
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        // DOM already loaded
+        init();
+    }
+    
+    // Also try after a short delay in case Thymeleaf hasn't rendered yet
+    setTimeout(init, 500);
+})();
+</script>
+</body>
+</html>
+

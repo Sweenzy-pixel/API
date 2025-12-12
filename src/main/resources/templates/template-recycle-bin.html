@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Template Recycle Bin</title>
+    <link rel="stylesheet" th:href="@{/assets/css/home.css}">
+    <style>
+        html, body {
+            height:100%;
+            margin:0;
+            padding:0;
+            font-family:Arial,Helvetica,sans-serif;
+            background-color:#96A78D;
+        }
+        
+        /* Navigation Bar */
+        .navbar {
+            background-color: #3C4A3E;
+            padding: 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+        
+        .nav-logo a {
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            text-decoration: none;
+            padding: 16px 0;
+            display: block;
+        }
+        
+        .nav-menu {
+            display: flex;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            gap: 0;
+        }
+        
+        .nav-menu li {
+            margin: 0;
+        }
+        
+        .nav-menu a {
+            color: white;
+            text-decoration: none;
+            padding: 16px 20px;
+            display: block;
+            transition: background-color 0.3s;
+            font-size: 15px;
+        }
+        
+        .nav-menu a:hover {
+            background-color: #5A6B5C;
+        }
+        
+        .nav-menu a:active {
+            background-color: #96A78D;
+        }
+        
+        .card {
+            background:#fff;
+            padding:20px;
+            border-radius:10px;
+            max-width:950px;
+            margin:20px auto;
+            box-shadow:0 4px 12px rgba(0,0,0,0.05);
+        }
+        
+        .message {
+            padding:10px 14px;
+            border-radius:6px;
+            margin-bottom:12px;
+        }
+        
+        .message.error {
+            background:#ffe5e5;
+            color:#a00;
+        }
+        
+        .message.success {
+            background:#e3f5df;
+            color:#1b5e20;
+        }
+        
+        .template-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .template-table th,
+        .template-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .template-table th {
+            background-color: #f5f5f5;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .template-table tr:hover {
+            background-color: #f9f9f9;
+        }
+        
+        .btn {
+            background:#9EBC8A;
+            color:#fff;
+            padding:8px 14px;
+            border-radius:6px;
+            border:none;
+            cursor:pointer;
+            font-weight:600;
+            text-decoration: none;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        
+        .btn:hover {
+            background:#8aab75;
+        }
+        
+        .btn-danger {
+            background:#dc3545;
+        }
+        
+        .btn-danger:hover {
+            background:#c82333;
+        }
+        
+        .btn-restore {
+            background:#28a745;
+        }
+        
+        .btn-restore:hover {
+            background:#218838;
+        }
+        
+        .link {
+            color:#4a5c7a;
+            text-decoration:none;
+            font-weight:600;
+        }
+        
+        .link:hover {
+            text-decoration: underline;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+  <!-- ===== Navigation Bar ===== -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <div class="nav-logo">
+        <a th:href="@{/home}">G-NEWS</a>
+      </div>
+      <ul class="nav-menu">
+        <li><a th:href="@{/home}">Home</a></li>
+        <li><a th:href="@{/csv/history}">CSV Files</a></li>
+        <li><a th:href="@{/csv/template}">Make a Template</a></li>
+        <li><a th:href="@{/csv/upload}">Upload CSV</a></li>
+        <li><a th:href="@{/audit-log}">Audit Trail</a></li>
+        <li><a th:href="@{/}">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+<div class="card">
+    <h2 style="margin-top:0;">🗑️ Template Recycle Bin</h2>
+    <p style="color:#555;">Deleted templates are stored here. You can restore them or permanently delete them.</p>
+
+    <div th:if="${templateMessage}" class="message success" th:text="${templateMessage}"></div>
+    <div th:if="${templateError}" class="message error" th:text="${templateError}"></div>
+
+    <div th:if="${deletedTemplates != null and deletedTemplates.size() > 0}">
+        <table class="template-table">
+            <thead>
+                <tr>
+                    <th>Template Name</th>
+                    <th>Created At</th>
+                    <th>Deleted At</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="template : ${deletedTemplates}">
+                    <td th:text="${template.name}"></td>
+                    <td th:text="${#temporals.format(template.createdAt, 'yyyy-MM-dd HH:mm')}"></td>
+                    <td th:text="${template.deletedAt != null ? #temporals.format(template.deletedAt, 'yyyy-MM-dd HH:mm') : 'N/A'}"></td>
+                    <td>
+                        <form th:action="@{'/csv/template/' + ${template.id} + '/restore'}" method="post" style="display:inline;">
+                            <button type="submit" class="btn btn-restore">Restore</button>
+                        </form>
+                        <form th:action="@{'/csv/template/' + ${template.id} + '/permanent-delete'}" method="post" style="display:inline;"
+                              onsubmit="return confirm('Are you sure you want to permanently delete this template? This action cannot be undone.');">
+                            <button type="submit" class="btn btn-danger">Delete Permanently</button>
+                        </form>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div th:if="${deletedTemplates == null or deletedTemplates.size() == 0}" class="empty-state">
+        <p>Recycle bin is empty. No deleted templates.</p>
+    </div>
+    
+    <div style="margin-top:20px;">
+        <a th:href="@{/csv/template}" class="link">← Back to Templates</a>
+    </div>
+</div>
+</body>
+</html>
+

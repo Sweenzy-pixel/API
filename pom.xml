@@ -63,7 +63,50 @@
             <artifactId>spring-security-crypto</artifactId>
         </dependency>
 
+		<dependency>
+ 		 <groupId>com.warrenstrange</groupId>
+  		<artifactId>googleauth</artifactId>
+ 		 <version>1.4.0</version>
+		</dependency>
+
+<!-- QR code generator -->
+		<dependency>
+	  <groupId>com.google.zxing</groupId>
+ 		 <artifactId>core</artifactId>
+ 		 <version>3.5.1</version>
+		</dependency>
+
+	<dependency>
+  	<groupId>com.google.zxing</groupId>
+  	<artifactId>javase</artifactId>
+  	<version>3.5.1</version>
+	</dependency>
+
+	<dependency>
+    <groupId>commons-codec</groupId>
+    <artifactId>commons-codec</artifactId>
+    <version>1.16.0</version>
 	
+</dependency>
+<dependency>
+    <groupId>org.apache.commons</groupId>
+    <artifactId>commons-csv</artifactId>
+    <version>1.10.0</version>
+</dependency>
+
+<dependency>
+    <groupId>org.projectlombok</groupId>
+    <artifactId>lombok</artifactId>
+    <version>1.18.32</version>
+    <scope>provided</scope>
+</dependency>
+
+<dependency>
+    <groupId>org.apache.poi</groupId>
+    <artifactId>poi-ooxml</artifactId>
+    <version>5.2.5</version>
+</dependency>
+
 
 	</dependencies>
 

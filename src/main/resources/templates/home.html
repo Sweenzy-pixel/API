@@ -1,98 +1,668 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-  <title>Home</title>
+  <title>Home - G-NEWS</title>
+  <link rel="stylesheet" th:href="@{/assets/css/global.css}">
   <link rel="stylesheet" th:href="@{/assets/css/home.css}">
-  <link rel="stylesheet" th:href="@{/assets/css/sidebar.css}">
-  <script th:src="@{/assets/js/sidebar.js}" defer></script>
+  <script th:src="@{/assets/js/ajax-navigation.js}" defer></script>
+
   <style>
     html, body {
       height: 100%;
       margin: 0;
       padding: 0;
-      overflow-y: auto; 
-      font-family: Arial, sans-serif;
-      background-color: #96A78D;
+      overflow-y: auto;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f5f5f5;
     }
 
-    .news-container {
-  margin: 20px auto;
-  max-width: 1200px;
-  padding: 20px;
-}
+    /* ===== Navigation Bar ===== */
+    .navbar {
+      background-color: #3C4A3E;
+      padding: 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+    
+    .nav-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 30px;
+    }
+    
+    .nav-logo a {
+      color: white;
+      font-size: 24px;
+      font-weight: bold;
+      text-decoration: none;
+      padding: 18px 0;
+      display: block;
+      letter-spacing: 1px;
+    }
+    
+    .nav-menu {
+      display: flex;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      gap: 0;
+    }
+    
+    .nav-menu li {
+      margin: 0;
+    }
+    
+    .nav-menu a {
+      color: white;
+      text-decoration: none;
+      padding: 18px 24px;
+      display: block;
+      transition: background-color 0.3s;
+      font-size: 15px;
+      font-weight: 500;
+    }
+    
+    .nav-menu a:hover {
+      background-color: #5A6B5C;
+    }
 
-.news-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-  gap: 20px;
-}
+    /* ===== Main Content Container ===== */
+    .main-content {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 40px 30px;
+      background: white;
+    }
 
-.news-item {
-  background: #F0F0F0;
-  padding: 15px;
-  border-radius: 8px;
-  box-shadow: 0 3px 8px rgba(0,0,0,0.1);
-  text-align: left;
-}
+    /* ===== Featured Carousel Section ===== */
+    .featured-section {
+      margin-bottom: 60px;
+    }
 
-.news-item h3 {
-  margin: 10px 0;
-  color: #333;
-  font-size: 18px;
-}
+    .carousel-wrapper {
+      position: relative;
+      width: 100%;
+      height: 500px;
+      overflow: hidden;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
+    }
 
-.news-item p {
-  margin: 0 0 8px 0;
-  color: #555;
-}
+    .carousel-track {
+      display: flex;
+      height: 100%;
+      transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
 
-.news-item a {
-  color: #96A78D;
-  font-weight: bold;
-  text-decoration: none;
-}
+    .carousel-item {
+      min-width: 100%;
+      height: 100%;
+      position: relative;
+      display: flex;
+      align-items: flex-end;
+    }
 
-.news-item a:hover {
-  text-decoration: underline;
-}
+    .carousel-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
 
-.news-img {
-  width: 100%;
-  height: 180px;
-  object-fit: cover;
-  border-radius: 8px;
-  margin-bottom: 10px;
-}
+    .carousel-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 50%, transparent 100%);
+      padding: 40px;
+      color: white;
+      z-index: 2;
+    }
 
+    .carousel-meta {
+      font-size: 13px;
+      color: rgba(255,255,255,0.9);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
 
+    .carousel-meta .author {
+      font-weight: 600;
+    }
+
+    .carousel-meta .time {
+      color: rgba(255,255,255,0.7);
+    }
+
+    .carousel-item h2 {
+      font-size: 36px;
+      font-weight: 700;
+      margin: 0 0 16px 0;
+      line-height: 1.3;
+      color: white;
+    }
+
+    .carousel-category {
+      display: inline-block;
+      background: #96A78D;
+      color: white;
+      padding: 6px 14px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-right: 12px;
+    }
+
+    .carousel-read-time {
+      color: rgba(255,255,255,0.8);
+      font-size: 13px;
+    }
+
+    .carousel-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(60, 74, 62, 0.9);
+      color: white;
+      border: none;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      font-size: 28px;
+      cursor: pointer;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    }
+
+    .carousel-btn:hover {
+      background: #96A78D;
+      transform: translateY(-50%) scale(1.1);
+    }
+
+    .carousel-btn.prev {
+      left: 20px;
+    }
+
+    .carousel-btn.next {
+      right: 20px;
+    }
+
+    .carousel-dots {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .carousel-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background-color: rgba(150, 167, 141, 0.4);
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .carousel-dot.active {
+      background-color: #96A78D;
+      transform: scale(1.3);
+    }
+
+    /* ===== News Grid Section ===== */
+    .news-grid-section {
+      margin-bottom: 60px;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      padding-bottom: 15px;
+      border-bottom: 3px solid #96A78D;
+    }
+
+    .section-title {
+      font-size: 32px;
+      font-weight: 700;
+      color: #2c3e2d;
+      margin: 0;
+      letter-spacing: -0.5px;
+    }
+
+    .see-more-link {
+      color: #96A78D;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: color 0.3s;
+    }
+
+    .see-more-link:hover {
+      color: #7d8f75;
+    }
+
+    .news-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+    }
+
+    .news-card {
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      transition: all 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      cursor: pointer;
+    }
+
+    .news-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+
+    .news-card.large {
+      grid-column: span 2;
+      grid-row: span 2;
+    }
+
+    .news-card.accent {
+      background: linear-gradient(135deg, #96A78D 0%, #B6CEB4 100%);
+      color: white;
+    }
+
+    .news-card.accent .card-meta,
+    .news-card.accent .card-category,
+    .news-card.accent .card-read-time {
+      color: rgba(255,255,255,0.9);
+    }
+
+    .news-card.accent h3 {
+      color: white;
+    }
+
+    .news-card-image {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .news-card.large .news-card-image {
+      height: 350px;
+    }
+
+    .news-card.accent .news-card-image {
+      display: none;
+    }
+
+    .card-content {
+      padding: 20px;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card-meta {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card-author {
+      font-weight: 600;
+      color: #3C4A3E;
+    }
+
+    .card-time {
+      color: #999;
+    }
+
+    .news-card h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0 0 12px 0;
+      color: #2c3e2d;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .news-card.large h3 {
+      font-size: 24px;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+    }
+
+    .card-footer {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: auto;
+      padding-top: 12px;
+    }
+
+    .card-category {
+      display: inline-block;
+      background: #f0f0f0;
+      color: #3C4A3E;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .news-card.accent .card-category {
+      background: rgba(255,255,255,0.2);
+      color: white;
+    }
+
+    .card-read-time {
+      font-size: 12px;
+      color: #999;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1200px) {
+      .news-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    @media (max-width: 900px) {
+      .news-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .news-card.large {
+        grid-column: span 2;
+      }
+      .carousel-item h2 {
+        font-size: 28px;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .news-grid {
+        grid-template-columns: 1fr;
+      }
+      .news-card.large {
+        grid-column: span 1;
+      }
+      .carousel-wrapper {
+        height: 400px;
+      }
+      .carousel-item h2 {
+        font-size: 22px;
+      }
+      .main-content {
+        padding: 20px 15px;
+      }
+    }
   </style>
 </head>
 <body>
-  <!-- Sidebar -->
-  <div id="sidebar" class="sidebar">
-    <a href="javascript:void(0)" class="closebtn" onclick="closeSidebar()">&times;</a>
-    <a th:href="@{/}">Logout</a>
-    <a th:href="@{/contact}">Contact Us</a>
-    <a th:href="@{/about}">About Us</a>
-  </div>
+  <!-- ===== Navigation Bar ===== -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <div class="nav-logo">
+        <a th:href="@{/home}">G-NEWS</a>
+      </div>
+      <ul class="nav-menu">
+        <li><a th:href="@{/home}">Home</a></li>
+        <li><a th:href="@{/csv/history}">CSV Files</a></li>
+        <li><a th:href="@{/csv/template}">Make a Template</a></li>
+        <li><a th:href="@{/csv/upload}">Upload CSV</a></li>
+        <li><a th:href="@{/audit-log}">Audit Trail</a></li>
+        <li><a th:href="@{/}">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
 
-  <!-- Hamburger Menu -->
-  <span id="menuBtn" class="menu-btn" onclick="openSidebar()">&#9776;</span>
+  <!-- ===== Main Content ===== -->
+  <div class="main-content">
+    <!-- ===== No Articles Message ===== -->
+    <div th:if="${articles == null or articles.isEmpty()}" style="text-align: center; padding: 60px 20px;">
+      <h2 style="color: #3C4A3E; margin-bottom: 20px;">Welcome to G-NEWS</h2>
+      <p style="color: #666; font-size: 16px;">News articles are currently unavailable. Please check back later.</p>
+    </div>
+    
+    <!-- ===== Featured Carousel ===== -->
+    <div class="featured-section" th:if="${articles != null and !articles.isEmpty()}">
+      <div class="carousel-wrapper">
+        <button class="carousel-btn prev" onclick="moveCarousel(-1)">‹</button>
+        <button class="carousel-btn next" onclick="moveCarousel(1)">›</button>
+        
+        <div class="carousel-track" id="carouselTrack">
+          <div th:each="article, iterStat : ${articles != null ? articles : {}}" class="carousel-item" th:attr="data-index=${iterStat.index}">
+            <img th:if="${article != null and article.imageUrl != null and !article.imageUrl.isEmpty()}" th:src="${article.imageUrl}" alt="News Image"/>
+            <div class="carousel-overlay">
+              <div class="carousel-meta">
+                <span class="author" th:text="${article != null and article.sourceName != null ? article.sourceName : 'Editor'}">Editor</span>
+                <span class="time" th:text="${article != null and article.publishedAt != null ? article.publishedAt : 'Recently'}">Recently</span>
+              </div>
+              <h2 th:text="${article != null and article.title != null ? article.title : 'News Article'}">News Title</h2>
+              <div>
+                <span class="carousel-category">NEWS</span>
+                <span class="carousel-read-time">12 minutes read</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="carousel-dots" id="carouselDots" th:if="${articles != null and !articles.isEmpty()}">
+        <span th:each="article, iterStat : ${articles}" 
+              class="carousel-dot" 
+              th:classappend="${iterStat.index == 0 ? 'active' : ''}"
+              th:attr="data-index=${iterStat.index}, onclick='goToSlide(' + ${iterStat.index} + ')'"></span>
+      </div>
+    </div>
 
-  <!-- News Section -->
-  <div class="news-container">
-  <h2>Latest WSJ News</h2>
-  <div class="news-grid">
-    <div th:each="article : ${articles}" class="news-item">
-      <img th:if="${article.imageUrl != null}" th:src="${article.imageUrl}" 
-           alt="News Image" class="news-img"/>
-      <h3 th:text="${article.title}"></h3>
-      <p th:text="${article.description}"></p>
-      <small th:text="${article.publishedAt}"></small><br/>
-      <a th:href="${article.url}" target="_blank">Read more</a>
+    <!-- ===== Editor's Pick Section ===== -->
+    <div class="news-grid-section" th:if="${articles != null and !articles.isEmpty()}">
+      <div class="section-header">
+        <h2 class="section-title">EDITOR'S PICK</h2>
+        <a href="#" class="see-more-link">SEE MORE →</a>
+      </div>
+      
+      <div class="news-grid">
+        <!-- Large Featured Card -->
+        <div class="news-card large" th:if="${articles != null and !articles.isEmpty()}">
+          <img th:if="${articles[0] != null and articles[0].imageUrl != null and !articles[0].imageUrl.isEmpty()}" 
+               th:src="${articles[0].imageUrl}" 
+               alt="News" class="news-card-image"/>
+          <div class="card-content">
+            <div class="card-meta">
+              <span class="card-author" th:text="${articles[0] != null and articles[0].sourceName != null ? articles[0].sourceName : 'Editor'}">Editor</span>
+              <span class="card-time" th:text="${articles[0] != null and articles[0].publishedAt != null ? articles[0].publishedAt : 'Recently'}">Recently</span>
+            </div>
+            <h3 th:text="${articles[0] != null and articles[0].title != null ? articles[0].title : 'Featured Article'}">Featured Article Title</h3>
+            <div class="card-footer">
+              <span class="card-category">NEWS</span>
+              <span class="card-read-time">10 minutes read</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Regular Cards -->
+        <div class="news-card" 
+             th:each="article, iterStat : ${articles != null ? articles : {}}" 
+             th:if="${iterStat.index > 0 and iterStat.index < 4 and article != null}">
+          <img th:if="${article.imageUrl != null and !article.imageUrl.isEmpty()}" 
+               th:src="${article.imageUrl}" 
+               alt="News" class="news-card-image"/>
+          <div class="card-content">
+            <div class="card-meta">
+              <span class="card-author" th:text="${article.sourceName != null ? article.sourceName : 'Editor'}">Editor</span>
+              <span class="card-time" th:text="${article.publishedAt != null ? article.publishedAt : 'Recently'}">Recently</span>
+            </div>
+            <h3 th:text="${article.title != null ? article.title : 'Article Title'}">Article Title</h3>
+            <div class="card-footer">
+              <span class="card-category">NEWS</span>
+              <span class="card-read-time">6 minutes read</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Accent Card (Green Background) -->
+        <div class="news-card accent" 
+             th:if="${articles != null and articles.size() > 4 and articles[4] != null}">
+          <div class="card-content">
+            <div class="card-meta">
+              <span class="card-author" th:text="${articles[4].sourceName != null ? articles[4].sourceName : 'Editor'}">Editor</span>
+              <span class="card-time" th:text="${articles[4].publishedAt != null ? articles[4].publishedAt : 'Recently'}">Recently</span>
+            </div>
+            <h3 th:text="${articles[4].title != null ? articles[4].title : 'Article Title'}">Article Title</h3>
+            <div class="card-footer">
+              <span class="card-category">TECH</span>
+              <span class="card-read-time">15 minutes read</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== More News Grid ===== -->
+    <div class="news-grid-section" th:if="${articles != null and articles.size() > 5}">
+      <div class="section-header">
+        <h2 class="section-title">LATEST NEWS</h2>
+      </div>
+      
+      <div class="news-grid">
+        <div class="news-card" 
+             th:each="article, iterStat : ${articles}" 
+             th:if="${iterStat.index >= 5 and article != null}">
+          <img th:if="${article.imageUrl != null and !article.imageUrl.isEmpty()}" 
+               th:src="${article.imageUrl}" 
+               alt="News" class="news-card-image"/>
+          <div class="card-content">
+            <div class="card-meta">
+              <span class="card-author" th:text="${article.sourceName != null ? article.sourceName : 'Editor'}">Editor</span>
+              <span class="card-time" th:text="${article.publishedAt != null ? article.publishedAt : 'Recently'}">Recently</span>
+            </div>
+            <h3 th:text="${article.title != null ? article.title : 'Article Title'}">Article Title</h3>
+            <div class="card-footer">
+              <span class="card-category">NEWS</span>
+              <span class="card-read-time">5 minutes read</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
-</div>
+
+  <script>
+    let currentSlide = 0;
+    const articles = document.querySelectorAll('.carousel-item');
+    const dots = document.querySelectorAll('.carousel-dot');
+    const totalSlides = articles.length;
+    let autoPlayInterval;
+
+    function updateCarousel() {
+      const track = document.getElementById('carouselTrack');
+      track.style.transform = `translateX(-${currentSlide * 100}%)`;
+      
+      dots.forEach((dot, index) => {
+        if (index === currentSlide) {
+          dot.classList.add('active');
+        } else {
+          dot.classList.remove('active');
+        }
+      });
+    }
+
+    function moveCarousel(direction) {
+      currentSlide += direction;
+      
+      if (currentSlide < 0) {
+        currentSlide = totalSlides - 1;
+      } else if (currentSlide >= totalSlides) {
+        currentSlide = 0;
+      }
+      
+      updateCarousel();
+      resetAutoPlay();
+    }
+
+    function goToSlide(index) {
+      currentSlide = index;
+      updateCarousel();
+      resetAutoPlay();
+    }
+
+    function startAutoPlay() {
+      autoPlayInterval = setInterval(() => {
+        moveCarousel(1);
+      }, 6000);
+    }
+
+    function resetAutoPlay() {
+      clearInterval(autoPlayInterval);
+      startAutoPlay();
+    }
+
+    // Initialize carousel
+    document.addEventListener('DOMContentLoaded', function() {
+      if (totalSlides > 0) {
+        updateCarousel();
+        startAutoPlay();
+      }
+    });
+
+    // Pause on hover
+    const carouselWrapper = document.querySelector('.carousel-wrapper');
+    if (carouselWrapper) {
+      carouselWrapper.addEventListener('mouseenter', () => {
+        clearInterval(autoPlayInterval);
+      });
+      
+      carouselWrapper.addEventListener('mouseleave', () => {
+        startAutoPlay();
+      });
+    }
+
+    // Make cards clickable
+    document.querySelectorAll('.news-card').forEach(card => {
+      card.addEventListener('click', function() {
+        const link = this.querySelector('a');
+        if (link) {
+          window.open(link.href, '_blank');
+        }
+      });
+    });
+  </script>
 
 </body>
 </html>

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Two-Factor Authentication</title>
+    <link rel="stylesheet" th:href="@{/assets/css/login.css}">
+   
+</head>
+<body>
+<div class="container">
+    <h2>Two-Factor Authentication Setup</h2>
+
+    <div th:if="${error}" class="error">
+        <p th:text="${error}"></p>
+    </div>
+
+    <p>Scan this QR code using Google Authenticator or any TOTP app:</p>
+
+    <div>
+        <img th:src="${qrUrl}" alt="QR Code" style="width:250px;height:250px;margin:20px 0;" />
+    </div>
+
+    <p>Then enter the 6-digit code to complete verification:</p>
+
+    <form th:action="@{/verify-2fa}" method="post" class="login-form">
+        <input type="hidden" name="username" th:value="${username}" />
+
+        <label>Authentication Code:</label>
+        <input type="number" name="code" required />
+
+        <button type="submit" class="btn">Verify</button>
+    </form>
+
+    <p>
+        <a th:href="@{/}" class="link">Back to Login</a>
+    </p>
+</div>
+</body>
+</html>

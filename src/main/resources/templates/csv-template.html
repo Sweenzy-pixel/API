@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Create CSV Template</title>
+    <link rel="stylesheet" th:href="@{/assets/css/global.css}">
+    <link rel="stylesheet" th:href="@{/assets/css/common.css}">
+    <script th:src="@{/assets/js/ajax-navigation.js}" defer></script>
+    <style>
+        html, body {
+            height:100%;
+            margin:0;
+            padding:0;
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+        }
+        
+        .card{background:#fff;padding:24px;border-radius:8px;max-width:1000px;margin:0 auto;box-shadow:0 2px 8px rgba(0,0,0,0.08)}
+        .field-row{display:flex;align-items:center;gap:12px;margin:6px 0}
+        .field-label{width:45%;font-weight:600;color:#444}
+        select{padding:8px;border-radius:6px;border:1px solid #ccc;min-width:120px}
+        .btn{background:#9EBC8A;color:#fff;padding:10px 16px;border-radius:8px;border:none;cursor:pointer;font-weight:600}
+        .btn.secondary{background:#6c7a61}
+        .message{padding:10px 14px;border-radius:6px;margin-bottom:12px}
+        .message.error{background:#ffe5e5;color:#a00}
+        .message.success{background:#e3f5df;color:#1b5e20}
+        .template-toolbar{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:18px;align-items:flex-end}
+        .template-toolbar select,.template-toolbar input{padding:8px;border-radius:6px;border:1px solid #ccc}
+        .actions{margin-top:16px;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+        .actions input[type="text"]{flex:1;min-width:200px;padding:10px;border:1px solid #ccc;border-radius:6px}
+        .link{color:#4a5c7a;text-decoration:none;font-weight:600}
+    </style>
+</head>
+<body>
+  <!-- ===== Navigation Bar ===== -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <div class="nav-logo">
+        <a th:href="@{/home}">G-NEWS</a>
+      </div>
+      <ul class="nav-menu">
+        <li><a th:href="@{/home}">Home</a></li>
+        <li><a th:href="@{/csv/history}">CSV Files</a></li>
+        <li><a th:href="@{/csv/template}">Make a Template</a></li>
+        <li><a th:href="@{/csv/upload}">Upload CSV</a></li>
+        <li><a th:href="@{/audit-log}">Audit Trail</a></li>
+        <li><a th:href="@{/}">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+  
+  <!-- ===== Main Content ===== -->
+  <div class="main-content">
+    <div class="page-header">
+      <h1 class="page-title">Create CSV Template</h1>
+      <p class="page-subtitle">Map CSV columns to data fields for automated processing</p>
+    </div>
+
+<div class="card">
+    <h2 style="margin-top:0;">Step 1: Create a CSV Template</h2>
+    <p style="color:#555;">Arrange how each required field should appear in the CSV columns. Save , After this, continue to the upload page to import actual CSV data.</p>
+
+    <div th:if="${templateMessage}" class="message success" th:text="${templateMessage}"></div>
+    <div th:if="${templateError}" class="message error" th:text="${templateError}"></div>
+    <div th:if="${templateSelected}" class="message" style="background:#eef2ff;color:#303f9f;">
+        Loaded template: <span th:text="${templateSelected}"></span>
+    </div>
+
+    <div class="template-toolbar" th:if="${mappingTemplates != null and mappingTemplates.size() > 0}" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;">
+        <form method="get" th:action="@{/csv/template}" style="display:flex;gap:10px;align-items:flex-end;">
+            <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:13px;color:#555;">Existing template</label>
+                <select name="templateId" id="templateSelect">
+                    <option value="">Select a template</option>
+                    <option th:each="t : ${mappingTemplates}" th:value="${t.id}"
+                            th:selected="${selectedTemplateId != null and selectedTemplateId == t.id}"
+                            th:text="${t.name}"></option>
+                </select>
+            </div>
+            <button type="button" class="btn" id="loadTemplateBtn">Load</button>
+            <a th:href="@{/csv/template}" class="link">Reset</a>
+        </form>
+
+        <div th:if="${selectedTemplateId != null}" style="display:flex;gap:10px;align-items:center;margin-left:auto;">
+            <a class="btn" th:href="@{'/csv/template/' + ${selectedTemplateId} + '/download'}" style="background:#007bff;color:#fff;padding:6px 12px;font-size:13px;text-decoration:none;border-radius:6px;display:inline-block;">Download</a>
+            <form th:action="@{'/csv/template/' + ${selectedTemplateId} + '/delete'}" method="post" style="display:inline;" 
+                  onsubmit="return confirm('Are you sure you want to delete this template? It will be moved to the recycle bin.');">
+                <button type="submit" class="btn" style="background:#dc3545;padding:6px 12px;font-size:13px;">Delete</button>
+            </form>
+        </div>
+    </div>
+    
+    <div style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;">
+        <a th:href="@{/csv/template/recycle-bin}" class="link" style="color:#dc3545;">🗑️ Recycle Bin</a>
+    </div>
+
+    <form id="templateForm" method="post" th:action="@{/csv/template/save}">
+        <!-- Template Name Input - positioned at top right -->
+        <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+                <label style="font-size:14px;color:#555;font-weight:600;">Template Name:</label>
+                <input type="text" name="templateName" id="templateNameInput" placeholder="Enter template name" required style="padding:8px 12px;border:1px solid #ccc;border-radius:6px;min-width:250px;font-size:14px;">
+            </div>
+        </div>
+        <div th:each="target,iterStat : ${targetFields}"
+             th:with="slug=${'field_' + (iterStat.index + 1)}, selection=${mappingUsed != null and mappingUsed[slug] != null ? mappingUsed[slug] : ''}"
+             class="field-row">
+            <div class="field-label">
+                <div th:text="${iterStat.index + 1} + '. ' + ${target}"></div>
+            </div>
+            <div>
+                <select th:name="${'mapping[' + slug + ']'}" class="mapping-select-template" th:attr="data-field-slug=${slug}, data-selection=${selection != null and !#strings.isEmpty(selection) ? selection : ''}" required>
+                    <option value="" disabled selected>Select a Column</option>
+                    <option th:each="i : ${columnOptions}" 
+                            th:value="${i}"
+                            th:text="${'Column ' + i}"
+                            th:selected="${selection != null and !#strings.isEmpty(selection) and selection != '' and (selection == i or selection.toString() == i.toString() or String.valueOf(i).equals(selection))}"></option>
+                </select>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button type="submit" class="btn"
+                    th:formaction="@{/csv/template/save}">Save Template</button>
+            <a class="btn" th:href="@{/csv/upload}" style="background:#007bff;color:#fff;padding:6px 12px;font-size:13px;text-decoration:none;border-radius:6px;display:inline-block;">Next: Upload CSV</a>
+        </div>
+    </form>
+</div>
+
+<script>
+(function() {
+    'use strict';
+    
+    // Store original options for each select element
+    const originalOptionsMap = new WeakMap();
+    let allSelects = [];
+    
+    // Initialize when DOM is ready
+    function init() {
+        // Get all mapping select elements
+        allSelects = Array.from(document.querySelectorAll('select.mapping-select-template'));
+        
+        if (allSelects.length === 0) {
+            // Try alternative selector
+            allSelects = Array.from(document.querySelectorAll('form#templateForm select[name^="mapping["]'));
+        }
+        
+        if (allSelects.length === 0) {
+            console.warn('No mapping select elements found');
+            return;
+        }
+        
+        // Check if template values are loaded by checking data-selection attributes
+        let hasTemplateValues = false;
+        allSelects.forEach((select, index) => {
+            const dataSelection = select.getAttribute('data-selection');
+            console.log('Select data-selection:', dataSelection, 'Current value:', select.value);
+            if (dataSelection && dataSelection !== '' && dataSelection !== null && dataSelection !== 'null') {
+                hasTemplateValues = true;
+                // Set the value from data-selection - this should match one of the option values
+                select.value = dataSelection;
+                console.log('Set select value to:', dataSelection, 'New value:', select.value);
+                // Store as initial value for later use
+                select.setAttribute('data-initial-value', dataSelection);
+            }
+        });
+        console.log('Has template values:', hasTemplateValues);
+        
+        // Don't auto-select defaults - let user choose from "Select a Column"
+        // Only set values if they come from a loaded template
+        
+        // Save original options for each select
+        allSelects.forEach(select => {
+            if (!originalOptionsMap.has(select)) {
+                const options = [];
+                for (let i = 0; i < select.options.length; i++) {
+                    const opt = select.options[i];
+                    options.push({
+                        value: opt.value,
+                        text: opt.text,
+                        isColumn: opt.value && opt.value !== '' && !isNaN(parseInt(opt.value))
+                    });
+                }
+                originalOptionsMap.set(select, options);
+            }
+        });
+        
+        // Add event listeners
+        allSelects.forEach(select => {
+            select.addEventListener('change', handleSelectChange);
+        });
+        
+        // Only update dropdowns if template values are loaded (to remove duplicates)
+        // This will preserve the loaded values while removing duplicates
+        if (hasTemplateValues) {
+            // Template loaded - update to remove duplicate columns while preserving loaded values
+            updateAllDropdowns();
+        }
+        // If no template, don't run updateAllDropdowns() - let them stay as AUTO
+    }
+    
+    // Handle select change
+    function handleSelectChange(e) {
+        updateAllDropdowns();
+    }
+    
+    // Get all currently selected column numbers
+    function getSelectedColumns() {
+        const selected = new Map();
+        allSelects.forEach(select => {
+            const val = select.value;
+            if (val && val !== '' && !isNaN(parseInt(val))) {
+                selected.set(val, select);
+            }
+        });
+        return selected;
+    }
+    
+    // Update all dropdowns - remove selected columns from other dropdowns
+    // But preserve user selections - don't reset if user made a choice
+    function updateAllDropdowns() {
+        // Get all currently selected column values (excluding empty/placeholder)
+        const selectedColumns = new Map(); // Map of column value -> select element
+        allSelects.forEach(select => {
+            const val = select.value;
+            if (val && val !== '' && !isNaN(parseInt(val))) {
+                selectedColumns.set(val.toString(), select);
+            }
+        });
+        
+        // Update each dropdown
+        allSelects.forEach(select => {
+            const currentValue = select.value;
+            const originalOpts = originalOptionsMap.get(select) || [];
+            
+            // Always preserve the current selection - don't reset it
+            let valueToPreserve = currentValue || '';
+            
+            // If no current value, check if there's an initial value from template
+            if (!valueToPreserve || valueToPreserve === '') {
+                const initialValue = select.getAttribute('data-initial-value');
+                if (initialValue) {
+                    valueToPreserve = initialValue;
+                }
+            }
+            
+            // Clear dropdown
+            while (select.options.length > 0) {
+                select.remove(0);
+            }
+            
+            // Rebuild options - exclude columns that are selected in OTHER dropdowns
+            originalOpts.forEach(optData => {
+                // Always include "Select a Column" placeholder
+                if (optData.value === '') {
+                    const opt = new Option(optData.text, optData.value);
+                    opt.disabled = true;
+                    // Only select placeholder if no value is currently selected
+                    if (!valueToPreserve || valueToPreserve === '') {
+                        opt.selected = true;
+                    }
+                    select.add(opt);
+                    return;
+                } else if (optData.isColumn) {
+                    const columnValue = optData.value.toString();
+                    // Check if this column is selected in another dropdown
+                    const isSelectedInOther = selectedColumns.has(columnValue) && 
+                                             selectedColumns.get(columnValue) !== select;
+                    
+                    // Show column if:
+                    // 1. It's the currently selected value in THIS dropdown (always show it), OR
+                    // 2. It's not selected in any other dropdown
+                    const isCurrentSelection = valueToPreserve && (valueToPreserve.toString() === columnValue);
+                    
+                    if (isCurrentSelection || !isSelectedInOther) {
+                        const opt = new Option(optData.text, optData.value);
+                        // Preserve the current selection
+                        if (isCurrentSelection) {
+                            opt.selected = true;
+                        }
+                        select.add(opt);
+                    }
+                } else {
+                    // Add any other options
+                    const opt = new Option(optData.text, optData.value);
+                    if (optData.value === valueToPreserve) {
+                        opt.selected = true;
+                    }
+                    select.add(opt);
+                }
+            });
+            
+            // Ensure the preserved value is still selected after rebuilding
+            if (valueToPreserve && valueToPreserve !== '') {
+                const optionToSelect = Array.from(select.options).find(opt => opt.value === valueToPreserve);
+                if (optionToSelect) {
+                    select.value = valueToPreserve;
+                }
+            }
+        });
+    }
+    
+    // Run initialization after a delay to ensure Thymeleaf has set all values
+    function delayedInit() {
+        // Wait a bit longer to ensure Thymeleaf has rendered all selected values
+        setTimeout(function() {
+            init();
+        }, 100);
+    }
+    
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', delayedInit);
+    } else {
+        // DOM already loaded, but wait for Thymeleaf
+        delayedInit();
+    }
+})();
+
+// Function to load template in new page - must be in global scope
+function loadTemplate() {
+    const select = document.getElementById('templateSelect');
+    if (!select) {
+        alert('Template select not found');
+        return;
+    }
+    const templateId = select.value;
+    if (templateId && templateId !== '') {
+        window.location.href = '/csv/template/' + templateId + '/edit';
+    } else {
+        alert('Please select a template first');
+    }
+}
+
+// Add event listener when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    const loadBtn = document.getElementById('loadTemplateBtn');
+    if (loadBtn) {
+        loadBtn.addEventListener('click', loadTemplate);
+    }
+});
+</script>
+  </div>
+</body>
+</html>
+

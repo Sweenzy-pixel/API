@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>CSV History</title>
+  <link rel="stylesheet" th:href="@{/assets/css/global.css}">
+  <link rel="stylesheet" th:href="@{/assets/css/common.css}">
+  <script th:src="@{/assets/js/ajax-navigation.js}" defer></script>
+
+  <style>
+    html, body { 
+      height:100%; 
+      margin:0; 
+      padding:0; 
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; 
+      background-color: #f5f5f5;
+    }
+    
+    .csv-table { 
+      background:#fff; 
+      border-collapse:collapse; 
+      width:100%; 
+      margin:20px 0; 
+      border-radius:8px; 
+      overflow:hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    
+    .csv-table th, .csv-table td { 
+      border:1px solid #f0f0f0; 
+      padding:12px 16px; 
+      font-size:14px; 
+      text-align:left; 
+    }
+    
+    .csv-table th { 
+      background-color:#3C4A3E; 
+      color:#fff; 
+      font-weight: 600;
+    }
+    
+    .csv-table tr:hover {
+      background: #f8f9fa;
+    }
+    
+    .action-buttons {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    
+    .action-btn {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .action-btn.view {
+      background: #96A78D;
+      color: white;
+    }
+    
+    .action-btn.view:hover {
+      background: #7d8f75;
+    }
+    
+    .action-btn.save {
+      background: #007bff;
+      color: white;
+    }
+    
+    .action-btn.save:hover {
+      background: #0056b3;
+    }
+    
+    .action-btn.re-extract {
+      background: #28a745;
+      color: white;
+    }
+    
+    .action-btn.re-extract:hover {
+      background: #218838;
+    }
+    
+    select.action-select {
+      padding: 4px 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <!-- ===== Navigation Bar ===== -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <div class="nav-logo">
+        <a th:href="@{/home}">G-NEWS</a>
+      </div>
+      <ul class="nav-menu">
+        <li><a th:href="@{/home}">Home</a></li>
+        <li><a th:href="@{/csv/history}">CSV Files</a></li>
+        <li><a th:href="@{/csv/template}">Make a Template</a></li>
+        <li><a th:href="@{/csv/upload}">Upload CSV</a></li>
+        <li><a th:href="@{/audit-log}">Audit Trail</a></li>
+        <li><a th:href="@{/}">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+  
+  <!-- ===== Main Content ===== -->
+  <div class="main-content">
+    <div class="page-header">
+      <h1 class="page-title">CSV Files History</h1>
+      <p class="page-subtitle">View and manage your uploaded CSV files. Select a template and click "Re-extract" to reprocess a file with an updated template mapping.</p>
+    </div>
+    
+    <div id="messageContainer"></div>
+
+    <table class="csv-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Filename</th>
+          <th>Uploaded At</th>
+          <th>Success</th>
+          <th>Failed</th>
+          <th>Total</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="f : ${csvFiles}">
+          <td th:text="${f.id}"></td>
+          <td th:text="${f.filename}"></td>
+          <td th:text="${#temporals.format(f.uploadedAt, 'yyyy-MM-dd HH:mm')}"></td>
+          <td th:text="${fileStats != null and fileStats.containsKey(f.id) ? fileStats.get(f.id).get('successCount') : 0}" style="color:green; font-weight:bold;"></td>
+          <td th:text="${fileStats != null and fileStats.containsKey(f.id) ? fileStats.get(f.id).get('failedCount') : 0}" style="color:red; font-weight:bold;"></td>
+          <td th:text="${fileStats != null and fileStats.containsKey(f.id) ? fileStats.get(f.id).get('totalCount') : 0}" style="font-weight:bold;"></td>
+          <td>
+            <div class="action-buttons">
+              <a th:href="@{'/csv/' + ${f.id} + '/view'}" class="action-btn view">View Records</a>
+              <div style="display:flex; gap:8px; align-items:center;">
+                <select th:id="${'templateSelect_' + f.id}" class="action-select">
+                  <option value="">-- Select Template --</option>
+                  <option th:each="template : ${mappingTemplates}" 
+                          th:value="${template.id}" 
+                          th:text="${template.name}"></option>
+                </select>
+                <button type="button" 
+                        th:data-file-id="${f.id}"
+                        class="save-template-btn action-btn save">Save</button>
+                <button type="button" 
+                        th:data-file-id="${f.id}"
+                        class="re-extract-btn action-btn re-extract">Re-extract</button>
+              </div>
+              <a th:href="@{'/csv/' + ${f.id} + '/download'}" style="color:#6c757d; text-decoration:none; font-size:12px;">Download</a>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+  </div>
+
+<script>
+(function() {
+    'use strict';
+    
+    function showMessage(message, type) {
+        const container = document.getElementById('messageContainer');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message ' + (type === 'success' ? 'success' : 'error');
+        messageDiv.textContent = message;
+        container.innerHTML = '';
+        container.appendChild(messageDiv);
+        
+        // Scroll to top smoothly
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+            messageDiv.style.transition = 'opacity 0.5s';
+            messageDiv.style.opacity = '0';
+            setTimeout(() => container.innerHTML = '', 500);
+        }, 5000);
+    }
+    
+    function updateRowStats(row, stats) {
+        // Find the row by file ID
+        const cells = row.querySelectorAll('td');
+        if (cells.length >= 6) {
+            // Update Success count (index 3)
+            cells[3].textContent = stats.successCount || 0;
+            cells[3].style.color = 'green';
+            cells[3].style.fontWeight = 'bold';
+            
+            // Update Failed count (index 4)
+            cells[4].textContent = stats.failedCount || 0;
+            cells[4].style.color = 'red';
+            cells[4].style.fontWeight = 'bold';
+            
+            // Update Total count (index 5)
+            cells[5].textContent = stats.totalCount || 0;
+            cells[5].style.fontWeight = 'bold';
+        }
+    }
+    
+    function setLoading(button, loading) {
+        if (loading) {
+            button.classList.add('btn-loading');
+            button.disabled = true;
+            button.textContent = 'Processing...';
+            button.parentElement.parentElement.parentElement.classList.add('loading');
+        } else {
+            button.classList.remove('btn-loading');
+            button.disabled = false;
+            button.textContent = 'Re-extract';
+            button.parentElement.parentElement.parentElement.classList.remove('loading');
+        }
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle Save button clicks
+        const saveButtons = document.querySelectorAll('.save-template-btn');
+        saveButtons.forEach(function(button) {
+            button.addEventListener('click', function() {
+                const fileId = this.getAttribute('data-file-id');
+                const selectId = 'templateSelect_' + fileId;
+                const select = document.getElementById(selectId);
+                const templateId = select ? select.value : null;
+                
+                if (!templateId || templateId === '') {
+                    showMessage('Please select a template first.', 'error');
+                    return;
+                }
+                
+                const row = this.closest('tr');
+                setLoading(this, true);
+                
+                // Create form data
+                const formData = new FormData();
+                formData.append('templateId', templateId);
+                
+                // Make AJAX request
+                fetch('/csv/' + fileId + '/save-template', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    setLoading(this, false);
+                    
+                    if (data.success) {
+                        showMessage(data.message || 'Template mapping saved successfully!', 'success');
+                    } else {
+                        showMessage(data.error || 'An error occurred while saving.', 'error');
+                    }
+                })
+                .catch(error => {
+                    setLoading(this, false);
+                    console.error('Error:', error);
+                    showMessage('An error occurred. Please try again.', 'error');
+                });
+            });
+        });
+        
+        // Handle Re-extract button clicks
+        const buttons = document.querySelectorAll('.re-extract-btn');
+        
+        buttons.forEach(function(button) {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                const buttonEl = this; // Store reference to button
+                const fileId = buttonEl.getAttribute('data-file-id');
+                const selectId = 'templateSelect_' + fileId;
+                const select = document.getElementById(selectId);
+                const templateId = select ? select.value : null;
+                
+                if (!templateId || templateId === '') {
+                    showMessage('Please select a template first.', 'error');
+                    return;
+                }
+                
+                const row = buttonEl.closest('tr');
+                setLoading(buttonEl, true);
+                
+                // Create form data
+                const formData = new FormData();
+                formData.append('templateId', templateId);
+                
+                // Make AJAX request
+                fetch('/csv/' + fileId + '/reprocess', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => {
+                    // Check if response is OK
+                    if (!response.ok) {
+                        return response.text().then(text => {
+                            let errorMsg = 'HTTP error! status: ' + response.status;
+                            try {
+                                const errorJson = JSON.parse(text);
+                                if (errorJson.error) {
+                                    errorMsg = errorJson.error;
+                                }
+                            } catch (e) {
+                                // Not JSON, use the text
+                                if (text && text.length > 0) {
+                                    errorMsg = text.substring(0, 200);
+                                }
+                            }
+                            throw new Error(errorMsg);
+                        });
+                    }
+                    // Check if response is JSON
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        return response.text().then(text => {
+                            throw new Error('Expected JSON but got: ' + text.substring(0, 100));
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    setLoading(buttonEl, false);
+                    
+                    if (data.success) {
+                        showMessage(data.message || 'File re-extracted successfully!', 'success');
+                        // Update statistics in the row
+                        if (data.stats) {
+                            updateRowStats(row, data.stats);
+                        }
+                        // Reload page after 2 seconds to show updated data
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000);
+                    } else {
+                        showMessage(data.error || 'An error occurred during re-extraction.', 'error');
+                    }
+                })
+                .catch(error => {
+                    setLoading(buttonEl, false);
+                    console.error('Re-extraction error:', error);
+                    const errorMsg = error.message || 'An error occurred. Please try again.';
+                    showMessage('Re-extraction failed: ' + errorMsg, 'error');
+                });
+            });
+        });
+    });
+    
+    // Listen for CSV stats updates from other pages
+    window.addEventListener('csvStatsUpdated', function(event) {
+        const fileId = event.detail.fileId;
+        const stats = event.detail.stats;
+        updateRowStatsForFile(fileId, stats);
+    });
+    
+    // Also listen to localStorage for cross-tab communication
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'csvStatsUpdated') {
+            // Check for updated stats
+            const table = document.querySelector('.csv-table');
+            if (table) {
+                const rows = table.querySelectorAll('tbody tr');
+                rows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length > 0) {
+                        const fileId = cells[0].textContent.trim();
+                        const statsJson = localStorage.getItem('csvStats_' + fileId);
+                        if (statsJson) {
+                            try {
+                                const stats = JSON.parse(statsJson);
+                                updateRowStatsForFile(fileId, stats);
+                            } catch (err) {
+                                console.error('Error parsing stats:', err);
+                            }
+                        }
+                    }
+                });
+            }
+        }
+    });
+    
+    // Function to update row stats for a specific file
+    function updateRowStatsForFile(fileId, stats) {
+        const table = document.querySelector('.csv-table');
+        if (!table) return;
+        
+        const rows = table.querySelectorAll('tbody tr');
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            if (cells.length > 0 && cells[0].textContent.trim() === String(fileId)) {
+                // Update Success count (index 3)
+                if (cells[3]) {
+                    cells[3].textContent = stats.successCount || 0;
+                    cells[3].style.color = 'green';
+                    cells[3].style.fontWeight = 'bold';
+                }
+                // Update Failed count (index 4)
+                if (cells[4]) {
+                    cells[4].textContent = stats.failedCount || 0;
+                    cells[4].style.color = 'red';
+                    cells[4].style.fontWeight = 'bold';
+                }
+                // Update Total count (index 5)
+                if (cells[5]) {
+                    cells[5].textContent = (stats.successCount || 0) + (stats.failedCount || 0);
+                    cells[5].style.fontWeight = 'bold';
+                }
+            }
+        });
+    }
+})();
+</script>
+
+</body>
+</html>
