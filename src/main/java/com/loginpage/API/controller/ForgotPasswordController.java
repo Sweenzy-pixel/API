@@ -4,6 +4,9 @@ import com.loginpage.API.model.PasswordResetToken;
 import com.loginpage.API.repository.PasswordResetTokenRepository;
 import com.loginpage.API.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.MailAuthenticationException;
+import org.springframework.mail.MailSendException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Controller;
@@ -25,6 +28,9 @@ public class ForgotPasswordController {
 
     @Autowired
     private JavaMailSender mailSender;
+
+    @Value("${spring.mail.username:}")
+    private String mailFromAddress;
 
     public static final String CAPTCHA_SESSION_KEY = "CAPTCHA_SESSION_KEY";
 
@@ -49,26 +55,51 @@ public class ForgotPasswordController {
         // ✅ Continue only if captcha passes
         return userRepository.findByEmail(email)
                 .map(user -> {
-                    resetTokenRepository.findByUser(user).ifPresent(resetTokenRepository::delete);
+                    try {
+                        // Remove previous token if any
+                        resetTokenRepository.findByUser(user).ifPresent(resetTokenRepository::delete);
 
-                    String token = UUID.randomUUID().toString();
+                        String token = UUID.randomUUID().toString();
 
-                    PasswordResetToken resetToken = new PasswordResetToken();
-                    resetToken.setToken(token);
-                    resetToken.setUser(user);
-                    resetToken.setExpiryDate(LocalDateTime.now().plusHours(1));
-                    resetTokenRepository.save(resetToken);
+                        PasswordResetToken resetToken = new PasswordResetToken();
+                        resetToken.setToken(token);
+                        resetToken.setUser(user);
+                        resetToken.setExpiryDate(LocalDateTime.now().plusHours(1));
+                        resetTokenRepository.save(resetToken);
 
-                    String resetLink = "http://localhost:8080/reset-password?token=" + token;
+                        String resetLink = "http://localhost:8080/reset-password?token=" + token;
 
-                    SimpleMailMessage message = new SimpleMailMessage();
-                    message.setTo(email);
-                    message.setSubject("Password Reset Request");
-                    message.setText("Click the link to reset your password: " + resetLink);
+                        SimpleMailMessage message = new SimpleMailMessage();
+                        message.setTo(email);
+                        if (mailFromAddress != null && !mailFromAddress.isBlank()) {
+                            message.setFrom(mailFromAddress.trim());
+                        }
+                        message.setSubject("Password Reset Request");
+                        message.setText("Click the link to reset your password: " + resetLink);
 
-                    mailSender.send(message);
+                        if (mailSender == null) {
+                            System.err.println("ERROR: JavaMailSender is null – mail not configured.");
+                            model.addAttribute("message", "Email service is not configured. Please contact support.");
+                            return "forgot-password";
+                        }
 
-                    model.addAttribute("message", "We have sent a reset link to your email.");
+                        mailSender.send(message);
+
+                        model.addAttribute("message", "We have sent a reset link to your email.");
+                    } catch (MailAuthenticationException e) {
+                        System.err.println("Mail authentication failed: " + e.getMessage());
+                        e.printStackTrace();
+                        model.addAttribute("message", "Email authentication failed. Please check mail configuration.");
+                    } catch (MailSendException e) {
+                        System.err.println("Mail send failed: " + e.getMessage());
+                        e.printStackTrace();
+                        model.addAttribute("message", "Failed to send email. Please try again later.");
+                    } catch (Exception e) {
+                        System.err.println("Unexpected mail error: " + e.getMessage());
+                        e.printStackTrace();
+                        model.addAttribute("message", "An unexpected error occurred while sending the reset link.");
+                    }
+
                     return "forgot-password";
                 })
                 .orElseGet(() -> {

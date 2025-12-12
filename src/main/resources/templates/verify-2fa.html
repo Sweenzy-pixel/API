@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Verify 2FA - G-NEWS</title>
+    <link rel="stylesheet" th:href="@{/assets/css/login.css}">
+    <link rel="stylesheet" th:href="@{/assets/css/global.css}">
+    <style>
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .login-header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            color: #2c3e2d;
+            margin: 0 0 8px 0;
+            letter-spacing: -0.5px;
+        }
+        
+        .login-header p {
+            color: #666;
+            font-size: 14px;
+            margin: 0;
+        }
+        
+        .info-text {
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        
+        .code-input {
+            text-align: center;
+            font-size: 24px;
+            letter-spacing: 8px;
+            font-weight: 600;
+        }
+        
+        .back-link-section {
+            text-align: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="login-header">
+            <h1>G-NEWS</h1>
+            <p>Two-Factor Authentication</p>
+        </div>
+
+        <!-- Show error if invalid code -->
+        <div th:if="${error}" class="error">
+            <p th:text="${error}"></p>
+        </div>
+
+        <p class="info-text">Enter the 6-digit code from your authenticator app</p>
+
+        <form th:action="@{/verify-2fa}" method="post" class="login-form">
+            <input type="hidden" name="username" th:value="${username}" />
+
+            <div class="form-group">
+                <label for="code">Authentication Code</label>
+                <input type="text" id="code" name="code" required 
+                       placeholder="000000" 
+                       maxlength="6"
+                       pattern="[0-9]{6}"
+                       class="code-input"
+                       oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 6);" />
+            </div>
+
+            <button type="submit" class="btn">Verify Code</button>
+        </form>
+
+        <div class="back-link-section">
+            <p><a th:href="@{/}" class="link">← Back to Login</a></p>
+        </div>
+    </div>
+</body>
+</html>

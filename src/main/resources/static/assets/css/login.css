@@ -1,23 +1,51 @@
 /* Reset & global styles */
 body {
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #96A78D, #B6CEB4);
+    background: linear-gradient(135deg, #96A78D 0%, #B6CEB4 50%, #96A78D 100%);
+    background-size: 200% 200%;
+    animation: gradientShift 15s ease infinite;
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
     margin: 0;
+    overflow: hidden;
+}
+
+@keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
 }
 
 /* Container */
 .container {
-    background: #F0F0F0;
-    padding: 35px;
-    border-radius: 15px;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
-    width: 350px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2), 0 0 0 1px rgba(255,255,255,0.1);
+    width: 380px;
     text-align: center;
     animation: fadeIn 0.8s ease-in-out;
+    position: relative;
+    overflow: hidden;
+}
+
+.container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(150, 167, 141, 0.1), transparent);
+    animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+    0% { left: -100%; }
+    100% { left: 100%; }
 }
 
 /* Animation for smooth entry */
@@ -27,11 +55,23 @@ body {
 }
 
 /* Headings */
-h2 {
+h1, h2 {
     margin-bottom: 20px;
     color: #333;
     font-weight: bold;
     letter-spacing: 1px;
+}
+
+.form-group {
+    margin-bottom: 18px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 6px;
+    color: #333;
+    font-weight: 600;
+    font-size: 14px;
 }
 
 /* Form */
@@ -60,7 +100,8 @@ h2 {
 
 .login-form input:focus {
     border-color: #96A78D;
-    box-shadow: 0 0 8px rgba(150, 167, 141, 0.4);
+    box-shadow: 0 0 0 3px rgba(150, 167, 141, 0.2);
+    transform: translateY(-2px);
 }
 
 /* Buttons */
@@ -76,8 +117,13 @@ h2 {
 }
 
 .btn:hover {
-    transform: translateY(-2px);
+    transform: translateY(-3px);
     background: linear-gradient(135deg, #7d8f75, #9fb89e);
+    box-shadow: 0 6px 20px rgba(150, 167, 141, 0.4);
+}
+
+.btn:active {
+    transform: translateY(-1px);
 }
 
 .btn.secondary {

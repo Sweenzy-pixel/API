@@ -3,8 +3,107 @@
 <head>
   <title>About Us</title>
   <link rel="stylesheet" th:href="@{/assets/css/login.css}">
+  <style>
+    html, body {
+      margin:0;
+      padding:0;
+      font-family: Arial, sans-serif;
+      background-color: #96A78D;
+      min-height: 100vh;
+    }
+    
+    /* Navigation Bar */
+    .navbar {
+      background-color: #3C4A3E;
+      padding: 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      position: relative;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 1000;
+    }
+    
+    .nav-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 20px;
+    }
+    
+    .nav-logo a {
+      color: white;
+      font-size: 20px;
+      font-weight: bold;
+      text-decoration: none;
+      padding: 16px 0;
+      display: block;
+    }
+    
+    .nav-menu {
+      display: flex;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      gap: 0;
+    }
+    
+    .nav-menu li {
+      margin: 0;
+    }
+    
+    .nav-menu a {
+      color: white;
+      text-decoration: none;
+      padding: 16px 20px;
+      display: block;
+      transition: background-color 0.3s;
+      font-size: 15px;
+    }
+    
+    .nav-menu a:hover {
+      background-color: #5A6B5C;
+    }
+    
+    .nav-menu a:active {
+      background-color: #96A78D;
+    }
+    
+    /* Override login.css container styles */
+    .container {
+      margin: 30px auto;
+      padding: 20px;
+      max-width: 800px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      position: relative;
+      top: auto;
+      left: auto;
+      transform: none;
+    }
+  </style>
 </head>
 <body>
+  <!-- ===== Navigation Bar ===== -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <div class="nav-logo">
+        <a th:href="@{/home}">G-NEWS</a>
+      </div>
+      <ul class="nav-menu">
+        <li><a th:href="@{/home}">Home</a></li>
+        <li><a th:href="@{/csv/history}">CSV Files</a></li>
+        <li><a th:href="@{/csv/template}">Make a Template</a></li>
+        <li><a th:href="@{/csv/upload}">Upload CSV</a></li>
+        <li><a th:href="@{/audit-log}">Audit Trail</a></li>
+        <li><a th:href="@{/}">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
   <div class="container">
     <h2>About Us</h2>
     <p>

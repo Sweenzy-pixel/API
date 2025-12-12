@@ -1,0 +1,1972 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Upload CSV</title>
+  <link rel="stylesheet" th:href="@{/assets/css/global.css}">
+  <link rel="stylesheet" th:href="@{/assets/css/common.css}">
+  <!-- Chart.js for graphs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- html2canvas for downloading charts -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script th:src="@{/assets/js/ajax-navigation.js}" defer></script>
+
+  <style>
+    html, body { 
+      height:100%; 
+      margin:0; 
+      padding:0; 
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; 
+      background-color: #f5f5f5;
+    }
+  .csv-upload { display:none; }
+  /* Modal overlay */
+  .upload-modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.25); display:flex; align-items:center; justify-content:center; z-index:2000; }
+  .upload-modal { background:#fff; width:720px; max-width:95%; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.15); padding:20px 24px; position:relative; }
+  .upload-modal h3 { margin:0 0 10px 0; font-size:18px; }
+  .upload-dropzone { border:2px dashed #caa3f0; border-radius:8px; padding:36px; text-align:center; cursor:pointer; }
+  .upload-dropzone .icon { font-size:36px; color:#7a2be6; margin-bottom:8px; }
+  .upload-dropzone p { margin:6px 0; color:#444; }
+  .upload-cta { margin-top:18px; display:flex; gap:12px; align-items:center; }
+  .btn-primary { background: linear-gradient(90deg,#b14cff,#8E2DE2); color:#fff; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:600; }
+  .btn-secondary { background:#fff; color:#333; border:1px solid #ddd; padding:10px 14px; border-radius:8px; cursor:pointer; }
+  /* Flat, simple dropzone and buttons (no gradients) */
+  .upload-card { background:#ffffff; width:520px; max-width:95%; margin:0 auto; border-radius:12px; padding:22px; box-shadow:0 6px 18px rgba(0,0,0,0.06); color:#333; }
+  .upload-card h3 { margin:0 0 6px 0; }
+  .upload-card p.sub { margin:0 0 12px 0; color:#777; font-size:14px; }
+  .dropzone { border:2px dashed #cfcfcf; border-radius:8px; padding:36px; text-align:center; cursor:pointer; background:#fafafa; }
+  .dropzone .hint { color:#666; margin-bottom:12px; }
+  .browse-btn { background:#9EBC8A; color:#fff; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:600; }
+  .browse-btn:active { transform:translateY(1px); }
+  .file-input-hidden { display:none; }
+  .upload-btn { background:#9EBC8A; color:#fff; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:700; margin-top:14px; }
+  .selected-filename { display:block; margin-top:8px; color:#444; font-size:13px; }
+  .upload-foot { display:flex; justify-content:space-between; align-items:center; margin-top:12px; font-size:12px; color:#777; }
+  .back-link { color:#ffffff; text-decoration:none; }
+  .close-x { position:absolute; right:12px; top:10px; font-size:20px; color:#666; cursor:pointer; }
+  input[type=file].hidden-file { display:none; }
+  
+  /* Results Container */
+  .results-container { 
+    max-width: 1400px; 
+    margin: 30px auto; 
+    padding: 0 20px; 
+  }
+  
+  /* Results Success Banner */
+  .results-success-banner {
+    background: #d4edda;
+    border: 2px solid #96A78D;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    color: #155724;
+    font-weight: 600;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 2px 6px rgba(150, 167, 141, 0.25);
+  }
+  
+  .results-success-banner .success-icon {
+    font-size: 22px;
+  }
+  
+  .results-success-banner .success-count {
+    font-weight: 500;
+    color: #0f5132;
+    margin-left: auto;
+    font-size: 14px;
+  }
+  
+  /* Navigation Bar */
+  .results-nav-bar {
+    background: #ffffff;
+    border-radius: 8px 8px 0 0;
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-top: 30px;
+  }
+  
+  .failed-nav {
+    margin-top: 40px;
+  }
+  
+  .nav-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #555;
+    font-weight: 500;
+  }
+  
+  .nav-breadcrumb .separator {
+    color: #999;
+    margin: 0 4px;
+  }
+  
+  .nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .nav-icon-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    transition: background 0.2s;
+  }
+  
+  .nav-icon-btn:hover {
+    background: #f0f0f0;
+  }
+  
+  .nav-separator {
+    color: #ddd;
+    margin: 0 4px;
+  }
+  
+  /* Results Table Container */
+  .results-table-container {
+    background: #ffffff;
+    border-radius: 0 0 8px 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  
+  .table-wrapper {
+    overflow-x: auto;
+    overflow-y: visible;
+    width: 100%;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .table-wrapper::-webkit-scrollbar {
+    height: 8px;
+  }
+  
+  .table-wrapper::-webkit-scrollbar-track {
+    background: #f1f1f1;
+  }
+  
+  .table-wrapper::-webkit-scrollbar-thumb {
+    background: #96A78D;
+    border-radius: 4px;
+  }
+  
+  .table-wrapper::-webkit-scrollbar-thumb:hover {
+    background: #7a9670;
+  }
+  
+  .results-table {
+    width: 100%;
+    min-width: 800px;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  
+  .results-table thead {
+    background: #f8f9fa;
+  }
+  
+  .results-table th {
+    padding: 12px 16px;
+    text-align: left;
+    font-weight: 600;
+    color: #333;
+    border-bottom: 2px solid #e0e0e0;
+    font-size: 13px;
+  }
+  
+  .results-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    color: #555;
+  }
+  
+  .results-table tbody tr:hover {
+    background: #f8f9fa;
+  }
+  
+  .results-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+  
+  .failed-table thead {
+    background: #fff5f5;
+  }
+  
+  .failed-table th {
+    color: #c53030;
+  }
+  
+  /* Row Number Indicator */
+  .row-number {
+    font-weight: 600;
+    color: #96A78D;
+    font-size: 12px;
+    text-align: center;
+    background: #f0f4f0;
+    border-radius: 4px;
+    padding: 4px 8px;
+    min-width: 35px;
+    display: inline-block;
+  }
+  
+  .failed-table .row-number {
+    color: #dc3545;
+    background: #fff5f5;
+  }
+  
+  /* Validation Errors */
+  .validation-errors {
+    max-width: 300px;
+    font-size: 12px;
+  }
+  
+  .error-badge {
+    display: inline-block;
+    background: #fee;
+    color: #c53030;
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin: 2px;
+    font-size: 11px;
+    border: 1px solid #feb2b2;
+  }
+  
+  .error-icon {
+    color: #c53030;
+    cursor: help;
+    font-size: 14px;
+    margin-left: 4px;
+  }
+  
+  .error-tooltip {
+    position: absolute;
+    background: #fff;
+    border: 1px solid #c53030;
+    border-radius: 4px;
+    padding: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    z-index: 1000;
+    max-width: 250px;
+    font-size: 12px;
+    display: none;
+  }
+  
+  .error-tooltip.show {
+    display: block;
+  }
+  
+  .error-tooltip ul {
+    margin: 0;
+    padding-left: 18px;
+    color: #c53030;
+  }
+  
+  .error-tooltip li {
+    margin: 4px 0;
+  }
+  
+  .invalid-field {
+    background: #fff5f5 !important;
+    border: 1px solid #feb2b2 !important;
+  }
+  
+  /* Pagination */
+  .pagination {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 16px 20px;
+    background: #fafafa;
+    border-top: 1px solid #e0e0e0;
+  }
+  
+  .pagination-btn {
+    background: #96A78D;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s;
+  }
+  
+  .pagination-btn:hover {
+    background: #7a9670;
+  }
+  
+  .pagination-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+  }
+  
+  .pagination-icon {
+    font-size: 16px;
+    margin: 0 4px;
+  }
+  
+  .pagination-input {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 6px 10px;
+    width: 50px;
+    text-align: center;
+    font-size: 13px;
+    background: white;
+  }
+  
+  .pagination-text {
+    color: #666;
+    font-size: 13px;
+    margin: 0 4px;
+  }
+
+  /* Draggable Table Container */
+  .results-table-container {
+    position: relative;
+  }
+
+  .results-table-container.dragging {
+    opacity: 0.7;
+  }
+
+  .table-drag-handle {
+    cursor: move;
+    user-select: none;
+    padding: 4px 8px;
+    color: #666;
+    font-size: 16px;
+  }
+
+  .table-drag-handle:hover {
+    color: #333;
+  }
+
+  /* Editable Cells */
+  .editable-cell {
+    position: relative;
+  }
+
+  .editable-cell[contenteditable="true"] {
+    outline: 1px solid #ddd;
+    outline-offset: -1px;
+    border-radius: 3px;
+    min-height: 20px;
+  }
+
+  .editable-cell[contenteditable="true"]:focus {
+    outline-color: #96A78D;
+    background: #f8f9fa;
+  }
+
+  /* Save Button */
+  .save-row-btn {
+    background: linear-gradient(135deg, #96A78D 0%, #7a9470 100%);
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 6px rgba(150,167,141,0.3);
+    min-width: 70px;
+  }
+  
+  .save-row-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #7a9470 0%, #5f7355 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(150,167,141,0.4);
+  }
+  
+  .save-row-btn:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(150,167,141,0.3);
+  }
+  
+  .save-row-btn:disabled {
+    background: #e0e0e0;
+    color: #999;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+  
+  .save-row-btn.saving {
+    background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+  
+  .save-row-btn.success {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    animation: successPulse 0.6s ease;
+  }
+  
+  @keyframes successPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+  }
+  .save-row-btn {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    margin-right: 6px;
+    transition: background 0.2s;
+    display: inline-block;
+  }
+
+  .save-row-btn:hover {
+    background: #0056b3;
+  }
+
+  .save-row-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  .save-row-btn.saving {
+    background: #6c757d;
+  }
+
+  /* Download All Button */
+  .download-all-btn {
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: background 0.2s;
+    display: inline-block;
+  }
+
+  .download-all-btn:hover {
+    background: #218838;
+  }
+
+  /* Success Message Banner */
+  .success-message-banner {
+    background: #d4edda;
+    border: 2px solid #96A78D;
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    color: #155724;
+    font-weight: 600;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 2px 4px rgba(150, 167, 141, 0.2);
+  }
+  
+  .success-icon {
+    font-size: 20px;
+  }
+  
+  /* Error Message */
+  .error-message {
+    max-width: 1400px;
+    margin: 30px auto;
+    padding: 16px 20px;
+    background: #fff5f5;
+    border: 1px solid #feb2b2;
+    border-radius: 8px;
+    color: #c53030;
+    text-align: center;
+  }
+  </style>
+</head>
+<body>
+  <!-- ===== Navigation Bar ===== -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <div class="nav-logo">
+        <a th:href="@{/home}">G-NEWS</a>
+      </div>
+      <ul class="nav-menu">
+        <li><a th:href="@{/home}">Home</a></li>
+        <li><a th:href="@{/csv/history}">CSV Files</a></li>
+        <li th:if="${viewingHistory != null and viewingHistory}">
+          <a th:href="@{'/csv/' + ${historyFileId} + '/view'}">Viewing: <span th:text="${historyFileName}"></span></a>
+        </li>
+        <li><a th:href="@{/csv/template}">Make a Template</a></li>
+        <li><a th:href="@{/csv/upload}">Upload CSV</a></li>
+        <li><a th:href="@{/audit-log}">Audit Trail</a></li>
+        <li><a th:href="@{/}">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+  
+  <!-- ===== Main Content ===== -->
+  <div class="main-content">
+    <div class="page-header">
+      <h1 class="page-title" th:text="${viewingHistory != null and viewingHistory ? 'View CSV Records' : 'Upload CSV File'}">Upload CSV File</h1>
+      <p class="page-subtitle" th:if="${viewingHistory != null and viewingHistory}">
+        Viewing records from: <strong th:text="${historyFileName}"></strong> | 
+        Uploaded: <strong th:text="${historyUploadDate != null ? #temporals.format(historyUploadDate, 'yyyy-MM-dd HH:mm') : 'N/A'}"></strong> | 
+        <a th:href="@{/csv/history}" style="color:#96A78D;">← Back to History</a>
+      </p>
+    </div>
+    
+    <div style="max-width:1000px;margin:0 auto;">
+    
+    
+    <div class="upload-card" role="region" aria-label="File upload">
+      <h3>File Upload</h3>
+      <p class="sub">Step 2: pick a saved template, then upload your CSV to validate it immediately.</p>
+      <div th:if="${success}" class="success-message-banner">
+        <span class="success-icon">✅</span>
+        <span th:text="${success}"></span>
+      </div>
+      <div th:if="${templateMessage}" style="background:#e3f5df;color:#1b5e20;padding:10px;border-radius:6px;margin-bottom:10px;" th:text="${templateMessage}"></div>
+      <div th:if="${templateInfo}" style="background:#eef2ff;color:#303f9f;padding:10px;border-radius:6px;margin-bottom:10px;" th:text="${templateInfo}"></div>
+      <div th:if="${error}" style="background:#ffe5e5;color:#a00;padding:10px;border-radius:6px;margin-bottom:10px;" th:text="${error}"></div>
+      <form th:action="@{/upload-csv}" method="post" enctype="multipart/form-data" id="uploadForm">
+        <div style="text-align:left;margin-bottom:14px;">
+          <label style="font-weight:600;display:block;margin-bottom:4px;">Template</label>
+          <select name="templateId" required style="width:100%;padding:10px;border:1px solid #ccc;border-radius:6px;"
+                  th:disabled="${mappingTemplates == null or mappingTemplates.size() == 0}">
+            <option value="">Select template</option>
+            <option th:each="t : ${mappingTemplates}" th:value="${t.id}"
+                    th:selected="${selectedTemplateId != null and selectedTemplateId == t.id}"
+                    th:text="${t.name}"></option>
+          </select>
+          <div style="margin-top:6px;font-size:13px;color:#666;">
+            <span th:if="${mappingTemplates == null or mappingTemplates.size() == 0}">
+              No templates available. <a th:href="@{/csv/template}">Create one first.</a>
+            </span>
+            <span th:if="${mappingTemplates != null and mappingTemplates.size() > 0}">
+              Need a new one? <a th:href="@{/csv/template}">Make a template</a> before uploading.
+            </span>
+          </div>
+        </div>
+        <input id="fileInput" class="file-input-hidden" type="file" name="file" accept=".csv" required onchange="handleFileSelect(this)">
+        <div id="dropzone" class="dropzone" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="handleDrop(event)">
+          <div class="hint">Drag files to upload</div>
+          <div style="margin:12px 0; color:#777;">or</div>
+          <button type="button" class="browse-btn" onclick="document.getElementById('fileInput').click()">Browse file</button>
+          <div id="selectedName" class="selected-filename" aria-live="polite"></div>
+        </div>
+        <div style="text-align:center;">
+          <button type="submit" class="upload-btn"
+                  th:attr="disabled=${mappingTemplates == null or mappingTemplates.size() == 0}">Upload</button>
+        </div>
+      </form>
+    </div>
+    </div>
+  </div>
+
+  <script>
+    function handleFileSelect(input){
+      var name = input.files && input.files.length ? input.files[0].name : '';
+      document.getElementById('selectedName').textContent = name;
+    }
+    function handleDrop(ev){
+      ev.preventDefault();
+      var dt = ev.dataTransfer;
+      if(!dt) return;
+      var files = dt.files;
+      if(files && files.length){
+        // assign files to the hidden input (modern browsers allow this)
+        var input = document.getElementById('fileInput');
+        input.files = files;
+        handleFileSelect(input);
+      }
+      ev.target.classList.remove('dragover');
+    }
+  </script>
+
+  <!-- ===== Results Section ===== -->
+  <div th:if="${successRecords != null or failedRecords != null}" class="results-container">
+    <!-- Success Banner -->
+    <div th:if="${success}" class="results-success-banner">
+      <span class="success-icon">✅</span>
+      <span th:text="${success}"></span>
+      <span th:if="${successCount != null and successCount > 0}" class="success-count">
+        (<span th:text="${successCount}"></span> records processed successfully)
+      </span>
+    </div>
+    
+    <!-- ===== Graph Section ===== -->
+    <div th:if="${successCount != null or failedCount != null}" class="graph-section" style="background:#fff;padding:28px;border-radius:16px;margin:20px 0;box-shadow:0 4px 20px rgba(0,0,0,0.08);border:1px solid #e9ecef;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+        <h3 style="margin:0;color:#2c3e2d;font-size:24px;font-weight:700;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:28px;">📊</span>
+          <span>Extraction Results Analytics</span>
+        </h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button onclick="downloadAllCharts()" class="download-btn download-all" style="background:linear-gradient(135deg,#96A78D 0%,#7a9470 100%);color:#fff;border:none;padding:10px 18px;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;box-shadow:0 2px 8px rgba(150,167,141,0.3);transition:all 0.3s;">
+            📥 Download All Charts
+          </button>
+        </div>
+      </div>
+      
+      <!-- Summary Cards Row -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px;">
+        <div id="successCard" style="text-align:center;padding:16px;background:linear-gradient(135deg,#d4edda 0%,#c3e6cb 100%);border-radius:8px;">
+          <div id="successCount" style="font-size:32px;font-weight:bold;color:#155724;" th:text="${successCount != null ? successCount : 0}">0</div>
+          <div style="color:#155724;font-weight:600;margin-top:8px;">✅ Successful</div>
+          <div id="successPercentDiv" style="font-size:12px;color:#155724;margin-top:4px;" th:if="${successCount != null and (successCount + (failedCount != null ? failedCount : 0)) > 0}">
+            <span id="successPercent" th:text="${#numbers.formatDecimal((successCount / (successCount + (failedCount != null ? failedCount : 0))) * 100, 1, 1)}">0</span>%
+          </div>
+        </div>
+        <div id="failedCard" style="text-align:center;padding:16px;background:linear-gradient(135deg,#f8d7da 0%,#f5c6cb 100%);border-radius:8px;">
+          <div id="failedCount" style="font-size:32px;font-weight:bold;color:#721c24;" th:text="${failedCount != null ? failedCount : 0}">0</div>
+          <div style="color:#721c24;font-weight:600;margin-top:8px;">❌ Failed</div>
+          <div id="failedPercentDiv" style="font-size:12px;color:#721c24;margin-top:4px;" th:if="${failedCount != null and (successCount != null ? successCount : 0) + failedCount > 0}">
+            <span id="failedPercent" th:text="${#numbers.formatDecimal((failedCount / ((successCount != null ? successCount : 0) + failedCount)) * 100, 1, 1)}">0</span>%
+          </div>
+        </div>
+        <div id="totalCard" style="text-align:center;padding:16px;background:linear-gradient(135deg,#d1ecf1 0%,#bee5eb 100%);border-radius:8px;">
+          <div id="totalCount" style="font-size:32px;font-weight:bold;color:#0c5460;" th:text="${(successCount != null ? successCount : 0) + (failedCount != null ? failedCount : 0)}">0</div>
+          <div style="color:#0c5460;font-weight:600;margin-top:8px;">📋 Total Records</div>
+        </div>
+      </div>
+      
+      <!-- Charts Row -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(450px,1fr));gap:28px;margin-bottom:28px;">
+        <!-- Success vs Failed Pie Chart -->
+        <div class="chart-container" style="background:linear-gradient(135deg,#f8f9fa 0%,#ffffff 100%);padding:24px;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.06);border:1px solid #e9ecef;position:relative;transition:transform 0.3s,box-shadow 0.3s;" onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 4px 16px rgba(0,0,0,0.12)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 2px 12px rgba(0,0,0,0.06)'">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+            <h4 style="margin:0;color:#2c3e2d;font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px;">
+              <span style="font-size:22px;">📊</span>
+              <span>Overall Results Distribution</span>
+            </h4>
+            <button onclick="downloadChart('pieChart', 'Overall-Results-Distribution')" class="download-btn" style="background:#96A78D;color:#fff;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;transition:all 0.2s;" onmouseover="this.style.background='#7a9470'" onmouseout="this.style.background='#96A78D'">
+              ⬇️ Download
+            </button>
+          </div>
+          <div style="position:relative;height:320px;">
+            <canvas id="pieChart"></canvas>
+          </div>
+        </div>
+        
+        <!-- Validation Error Breakdown -->
+        <div class="chart-container" style="background:linear-gradient(135deg,#f8f9fa 0%,#ffffff 100%);padding:24px;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.06);border:1px solid #e9ecef;position:relative;transition:transform 0.3s,box-shadow 0.3s;" th:if="${failedCount != null and failedCount > 0}" onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 4px 16px rgba(0,0,0,0.12)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 2px 12px rgba(0,0,0,0.06)'">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+            <h4 style="margin:0;color:#2c3e2d;font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px;">
+              <span style="font-size:22px;">⚠️</span>
+              <span>Top Validation Errors</span>
+            </h4>
+            <button onclick="downloadChart('errorChart', 'Top-Validation-Errors')" class="download-btn" style="background:#dc3545;color:#fff;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;transition:all 0.2s;" onmouseover="this.style.background='#c82333'" onmouseout="this.style.background='#dc3545'">
+              ⬇️ Download
+            </button>
+          </div>
+          <div style="position:relative;height:320px;">
+            <canvas id="errorChart"></canvas>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Field Error Analysis -->
+      <div class="chart-container" style="background:linear-gradient(135deg,#f8f9fa 0%,#ffffff 100%);padding:24px;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.06);border:1px solid #e9ecef;position:relative;transition:transform 0.3s,box-shadow 0.3s;" th:if="${failedCount != null and failedCount > 0}" onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 4px 16px rgba(0,0,0,0.12)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 2px 12px rgba(0,0,0,0.06)'">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+          <h4 style="margin:0;color:#2c3e2d;font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px;">
+            <span style="font-size:22px;">🔍</span>
+            <span>Field-Level Error Analysis</span>
+          </h4>
+          <button onclick="downloadChart('fieldErrorChart', 'Field-Level-Error-Analysis')" class="download-btn" style="background:#17a2b8;color:#fff;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;transition:all 0.2s;" onmouseover="this.style.background='#138496'" onmouseout="this.style.background='#17a2b8'">
+            ⬇️ Download
+          </button>
+        </div>
+        <div style="position:relative;height:360px;">
+          <canvas id="fieldErrorChart"></canvas>
+        </div>
+      </div>
+      
+    </div>
+    
+    <!-- Navigation Bar for Successful Records -->
+    <div th:if="${successRecords != null and successRecords.size() > 0}" class="results-nav-bar">
+      <div class="nav-breadcrumb">
+        <span>record</span>
+        <span class="separator">></span>
+        <span>csv</span>
+        <span class="separator">></span>
+        <span th:text="${successCount} + ' records'"></span>
+      </div>
+      <div class="nav-actions">
+        <button class="download-all-btn" onclick="downloadAllRecords()" title="Download all records as CSV">📥 Download All</button>
+        <span class="nav-separator">|</span>
+        <button class="nav-icon-btn" title="Refresh" onclick="location.reload()">🔄</button>
+        <button class="nav-icon-btn" title="View">👁️</button>
+        <span class="nav-separator">|</span>
+        <button class="nav-icon-btn" title="Search">🔍</button>
+        <button class="nav-icon-btn" title="Add">➕</button>
+        <button class="nav-icon-btn" title="Delete">🗑️</button>
+      </div>
+    </div>
+
+    <!-- Successful Records Table -->
+    <div th:if="${successRecords != null and successRecords.size() > 0}" class="results-table-container" id="successTableContainer">
+      <div class="table-wrapper">
+        <table class="results-table" id="successTable">
+          <thead>
+            <tr>
+              <th style="width: 40px;"></th>
+              <th th:if="${displayTitles != null}" th:each="title : ${displayTitles}" th:text="${title}"></th>
+              <th th:if="${displayTitles == null}" th:each="header : ${successRecords[0].fields.keySet()}" th:text="${header}"></th>
+              <th style="width: 100px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="record, iterStat : ${successRecords}" 
+                class="draggable-row"
+                th:data-record-index="${iterStat.index}">
+              <td class="table-drag-handle" draggable="true">⋮⋮</td>
+              <th:block th:if="${displayFields != null}">
+                <td th:each="h : ${displayFields}" 
+                    class="editable-cell" 
+                    contenteditable="true"
+                    th:attr="data-field=${h}"
+                    th:text="${record.getField(h)}"></td>
+              </th:block>
+              <th:block th:if="${displayFields == null}">
+                <td th:each="entry : ${record.fields.entrySet()}" 
+                    class="editable-cell" 
+                    contenteditable="true"
+                    th:attr="data-field=${entry.key}"
+                    th:text="${entry.value}"></td>
+              </th:block>
+              <td style="text-align:center;">
+                <button class="save-row-btn" onclick="saveRow(this)" disabled title="Save changes to this row">
+                  💾 Save
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- Pagination for Success -->
+      <div class="pagination">
+        <button class="pagination-btn">←</button>
+        <span class="pagination-icon">📄</span>
+        <input type="text" class="pagination-input" value="1" readonly>
+        <span class="pagination-text">/<span th:text="${successTotalPages}"></span></span>
+        <input type="text" class="pagination-input" th:value="${successCount} + ' rows'" readonly>
+        <button class="pagination-btn">→</button>
+      </div>
+    </div>
+
+    <!-- Navigation Bar for Failed Records -->
+    <div th:if="${failedRecords != null and failedRecords.size() > 0}" class="results-nav-bar failed-nav">
+      <div class="nav-breadcrumb">
+        <span>record</span>
+        <span class="separator">></span>
+        <span>csv</span>
+        <span class="separator">></span>
+        <span th:text="${failedCount} + ' failed records'"></span>
+      </div>
+      <div class="nav-actions">
+        <button class="download-all-btn" onclick="downloadAllRecords()" title="Download all records as CSV">📥 Download All</button>
+        <span class="nav-separator">|</span>
+        <button class="nav-icon-btn" title="Refresh" onclick="location.reload()">🔄</button>
+        <button class="nav-icon-btn" title="View">👁️</button>
+        <span class="nav-separator">|</span>
+        <button class="nav-icon-btn" title="Search">🔍</button>
+        <button class="nav-icon-btn" title="Add">➕</button>
+        <button class="nav-icon-btn" title="Delete">🗑️</button>
+      </div>
+    </div>
+
+    <!-- Failed Records Table -->
+    <div th:if="${failedRecords != null and failedRecords.size() > 0}" class="results-table-container" id="failedTableContainer">
+      <div class="table-wrapper">
+        <table class="results-table failed-table" id="failedTable">
+          <thead>
+            <tr>
+              <th style="width: 60px;text-align:center;">#</th>
+              <th th:if="${displayTitles != null}" th:each="title : ${displayTitles}" th:text="${title}"></th>
+              <th th:if="${displayTitles == null and rawHeaders != null}" th:each="header : ${rawHeaders}" th:text="${header}"></th>
+              <th th:if="${displayTitles == null and rawHeaders == null}" th:each="header : ${failedRecords[0].fields.keySet()}" th:text="${header}"></th>
+              <th style="width: 220px;text-align:center;">⚠️ Validation Errors</th>
+              <th style="width: 120px;text-align:center;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="record, iterStat : ${failedRecords}" 
+                class="draggable-row"
+                th:data-record-index="${iterStat.index}">
+              <td style="text-align:center;">
+                <span class="row-number" th:text="${iterStat.index + 1}">1</span>
+              </td>
+              <th:block th:if="${displayFields != null}">
+                <td th:each="h : ${displayFields}" 
+                    class="editable-cell" 
+                    contenteditable="true"
+                    th:attr="data-field=${h}"
+                    th:text="${record.getField(h)}"></td>
+              </th:block>
+              <th:block th:if="${displayFields == null and rawHeaders != null}">
+                <td th:each="h : ${rawHeaders}" 
+                    class="editable-cell" 
+                    contenteditable="true"
+                    th:attr="data-field=${h}"
+                    th:text="${record.getField(h)}"></td>
+              </th:block>
+              <th:block th:if="${displayFields == null and rawHeaders == null}">
+                <td th:each="entry : ${record.fields.entrySet()}" 
+                    class="editable-cell" 
+                    contenteditable="true"
+                    th:attr="data-field=${entry.key}"
+                    th:text="${entry.value}"></td>
+              </th:block>
+              <td class="validation-errors" style="position: relative;text-align:center;">
+                <span th:if="${validationErrors != null and validationErrors.get(iterStat.index) != null and !validationErrors.get(iterStat.index).isEmpty()}"
+                      class="error-icon" 
+                      th:attr="data-errors=${#strings.listJoin(validationErrors.get(iterStat.index), '|')}"
+                      onmouseenter="showErrorTooltip(this)"
+                      onmouseleave="hideErrorTooltip(this)">⚠️</span>
+                <div class="error-tooltip">
+                  <ul>
+                    <li th:if="${validationErrors != null and validationErrors.get(iterStat.index) != null}"
+                        th:each="error : ${validationErrors.get(iterStat.index)}" 
+                        th:text="${error}"></li>
+                  </ul>
+                </div>
+              </td>
+              <td style="text-align:center;">
+                <button class="save-row-btn" onclick="saveRow(this)" disabled title="Save changes to this row">
+                  💾 Save
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- Pagination for Failed -->
+      <div class="pagination">
+        <button class="pagination-btn">←</button>
+        <span class="pagination-icon">📄</span>
+        <input type="text" class="pagination-input" value="1" readonly>
+        <span class="pagination-text">/<span th:text="${failedTotalPages}"></span></span>
+        <input type="text" class="pagination-input" th:value="${failedCount} + ' rows'" readonly>
+        <button class="pagination-btn">→</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Error Message ===== -->
+  <div th:if="${error}" class="error-message">
+    <p th:text="${error}"></p>
+  </div>
+
+
+  <script th:inline="javascript">
+    /*<![CDATA[*/
+    const csvFileId = /*[[${csvFileId}]]*/ null;
+    const dataToEntityId = /*[[${dataToEntityId}]]*/ {};
+    let draggedRow = null;
+    let draggedOverRow = null;
+
+    // Initialize record IDs on rows by matching field values
+    function initializeRecordIds() {
+      const rows = document.querySelectorAll('.draggable-row');
+      rows.forEach(row => {
+        const cells = row.querySelectorAll('.editable-cell[data-field]');
+        const recordData = {};
+        cells.forEach(cell => {
+          const field = cell.getAttribute('data-field');
+          const value = cell.textContent.trim();
+          recordData[field] = value;
+        });
+        
+        // Try to find matching entity ID by comparing JSON data
+        if (dataToEntityId && Object.keys(recordData).length > 0) {
+          const recordJson = JSON.stringify(recordData);
+          // Normalize JSON for comparison (handle key ordering)
+          const normalizedRecord = JSON.parse(recordJson);
+          
+          for (const [dataJson, entityId] of Object.entries(dataToEntityId)) {
+            try {
+              const entityData = JSON.parse(dataJson);
+              // Compare field by field
+              let matches = true;
+              let hasFields = false;
+              for (const key in normalizedRecord) {
+                hasFields = true;
+                if (normalizedRecord[key] !== entityData[key]) {
+                  matches = false;
+                  break;
+                }
+              }
+              // Also check if entity has extra fields
+              if (matches && hasFields) {
+                for (const key in entityData) {
+                  if (!(key in normalizedRecord)) {
+                    matches = false;
+                    break;
+                  }
+                }
+              }
+              if (matches && hasFields) {
+                row.setAttribute('data-record-id', entityId);
+                break;
+              }
+            } catch (e) {
+              // If parsing fails, try direct string match
+              if (recordJson === dataJson) {
+                row.setAttribute('data-record-id', entityId);
+                break;
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Initialize editable cells
+    document.addEventListener('DOMContentLoaded', function() {
+      initializeRecordIds();
+      initializeEditableCells();
+      initializeDragAndDrop();
+      highlightInvalidFields();
+    });
+    
+    function highlightInvalidFields() {
+      // Get all failed rows
+      const failedRows = document.querySelectorAll('#failedTable tbody tr.draggable-row');
+      failedRows.forEach((row, rowIndex) => {
+        const errorIcon = row.querySelector('.error-icon');
+        if (!errorIcon) return;
+        
+        const errors = errorIcon.getAttribute('data-errors');
+        if (!errors) return;
+        
+        const errorList = errors.split('|');
+        
+        // Map error messages to field names
+        errorList.forEach(error => {
+          let fieldName = null;
+          if (error.includes('Student ID')) fieldName = 'Student ID';
+          else if (error.includes('First Name')) fieldName = 'First Name';
+          else if (error.includes('Last Name')) fieldName = 'Last Name';
+          else if (error.includes('Middle Name')) fieldName = 'Middle Name';
+          else if (error.includes('Gender')) fieldName = 'Gender';
+          else if (error.includes('Date of Birth')) fieldName = 'Date of Birth';
+          else if (error.includes('Email Address')) fieldName = 'Email Address';
+          else if (error.includes('Age')) fieldName = 'Age';
+          else if (error.includes('Contact Number')) fieldName = 'Contact Number';
+          else if (error.includes('Nationality')) fieldName = 'Nationality';
+          
+          if (fieldName) {
+            const cell = row.querySelector(`.editable-cell[data-field="${fieldName}"]`);
+            if (cell) {
+              cell.classList.add('invalid-field');
+            }
+          }
+        });
+      });
+    }
+
+    function initializeEditableCells() {
+      const cells = document.querySelectorAll('.editable-cell[contenteditable="true"]');
+      cells.forEach(cell => {
+        const originalValue = cell.textContent.trim();
+        
+        cell.addEventListener('input', function() {
+          const row = this.closest('tr');
+          const saveBtn = row.querySelector('.save-row-btn');
+          if (saveBtn) {
+            saveBtn.disabled = false;
+            this.classList.add('edited');
+          }
+        });
+
+        cell.addEventListener('blur', function() {
+          // Optional: validate on blur
+        });
+      });
+    }
+
+    function initializeDragAndDrop() {
+      const tables = document.querySelectorAll('.results-table tbody');
+      tables.forEach(tbody => {
+        tbody.addEventListener('dragstart', function(e) {
+          if (e.target.classList.contains('table-drag-handle')) {
+            draggedRow = e.target.closest('tr');
+            e.target.style.opacity = '0.5';
+            e.dataTransfer.effectAllowed = 'move';
+          }
+        });
+
+        tbody.addEventListener('dragend', function(e) {
+          if (e.target.classList.contains('table-drag-handle')) {
+            e.target.style.opacity = '1';
+            draggedRow = null;
+            draggedOverRow = null;
+          }
+        });
+
+        tbody.addEventListener('dragover', function(e) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          
+          const row = e.target.closest('tr');
+          if (row && row !== draggedRow && row.classList.contains('draggable-row')) {
+            draggedOverRow = row;
+            const rows = Array.from(tbody.querySelectorAll('tr.draggable-row'));
+            rows.forEach(r => r.style.borderTop = '');
+            
+            if (e.offsetY < row.offsetHeight / 2) {
+              row.style.borderTop = '2px solid #96A78D';
+            } else {
+              row.style.borderBottom = '2px solid #96A78D';
+            }
+          }
+        });
+
+        tbody.addEventListener('dragleave', function(e) {
+          const row = e.target.closest('tr');
+          if (row) {
+            row.style.borderTop = '';
+            row.style.borderBottom = '';
+          }
+        });
+
+        tbody.addEventListener('drop', function(e) {
+          e.preventDefault();
+          if (draggedRow && draggedOverRow && draggedRow !== draggedOverRow) {
+            const tbody = draggedRow.parentNode;
+            const rows = Array.from(tbody.querySelectorAll('tr.draggable-row'));
+            const draggedIndex = rows.indexOf(draggedRow);
+            const targetIndex = rows.indexOf(draggedOverRow);
+            
+            if (e.offsetY < draggedOverRow.offsetHeight / 2) {
+              tbody.insertBefore(draggedRow, draggedOverRow);
+            } else {
+              tbody.insertBefore(draggedRow, draggedOverRow.nextSibling);
+            }
+            
+            // Reset borders
+            rows.forEach(r => {
+              r.style.borderTop = '';
+              r.style.borderBottom = '';
+            });
+          }
+          draggedRow = null;
+          draggedOverRow = null;
+        });
+      });
+    }
+
+    function saveRow(button) {
+      const row = button.closest('tr');
+      const recordId = row.getAttribute('data-record-id');
+      
+      if (!recordId) {
+        alert('Record ID not found. Cannot save.');
+        return;
+      }
+
+      const cells = row.querySelectorAll('.editable-cell[data-field]');
+      const data = {};
+      
+      cells.forEach(cell => {
+        const field = cell.getAttribute('data-field');
+        const value = cell.textContent.trim();
+        data[field] = value;
+      });
+
+      // Add saving state
+      button.classList.add('saving');
+      button.disabled = true;
+      button.textContent = '⏳ Saving...';
+
+      fetch('/api/csv/record/' + recordId + '/update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      })
+      .then(response => response.json())
+      .then(result => {
+        if (result.success) {
+          // Show success animation
+          button.classList.remove('saving');
+          button.classList.add('success');
+          button.textContent = '✅ Saved';
+          
+          // Remove changed class from all cells in the row
+          const cells = row.querySelectorAll('.editable-cell');
+          cells.forEach(cell => {
+            cell.classList.remove('changed');
+            // Add a brief success flash
+            cell.style.transition = 'background 0.3s';
+            cell.style.background = '#d4edda';
+            setTimeout(() => {
+              cell.style.background = '';
+            }, 500);
+          });
+          
+          // Reset button after 2 seconds
+          setTimeout(() => {
+            button.classList.remove('success');
+            button.textContent = '💾 Save';
+            button.disabled = true;
+          }, 2000);
+          
+          // Check if record is now successful and should move to success table
+          // Handle both boolean true and string "true" from JSON
+          const isNowSuccessful = result.isSuccess === true || result.isSuccess === 'true' || String(result.isSuccess).toLowerCase() === 'true';
+          const isInFailedTable = row.closest('#failedTable') !== null;
+          
+          if (isNowSuccessful && isInFailedTable) {
+            // Move row from failed table to success table
+            moveRowToSuccessTable(row);
+          } else {
+            // Update the row in place - mark as saved and update visual state
+            row.classList.add('saved');
+            row.style.transition = 'background-color 0.3s';
+            row.style.backgroundColor = '#d4edda';
+            setTimeout(() => {
+              row.style.backgroundColor = '';
+            }, 2000);
+            
+            // Update record counts in navigation bars
+            updateRecordCounts();
+          }
+          
+          // Update graphs and statistics if stats are provided
+          if (result.stats) {
+            updateGraphsWithStats(result.stats);
+            updateHistoryPageStats(result.fileId, result.stats);
+          } else if (result.fileId) {
+            // Fetch updated statistics
+            fetchFileStatsAndUpdate(result.fileId);
+          }
+          
+          // Remove edited class from all cells
+          row.querySelectorAll('.editable-cell').forEach(cell => {
+            cell.classList.remove('edited');
+          });
+          
+          // Show success notification
+          showSaveNotification('Record updated successfully!');
+          
+          setTimeout(() => {
+            button.textContent = 'Save';
+            button.style.background = '';
+            button.classList.remove('saving');
+            button.disabled = false; // Re-enable for future edits
+          }, 2000);
+          
+        } else {
+          alert('Error saving: ' + result.message);
+          button.disabled = false;
+          button.textContent = 'Save';
+          button.classList.remove('saving');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('Error saving record: ' + error.message);
+        button.disabled = false;
+        button.textContent = 'Save';
+        button.classList.remove('saving');
+      });
+    }
+
+    function moveRowToSuccessTable(row) {
+      // Get or create the success table container
+      let successTableContainer = document.querySelector('#successTableContainer');
+      let successTable = document.querySelector('#successTable');
+      
+      // If success table doesn't exist, we need to create it
+      if (!successTable || !successTableContainer) {
+        // Find the failed table container to use as reference
+        const failedTableContainer = document.querySelector('#failedTableContainer');
+        if (!failedTableContainer) {
+          console.error('Cannot find table containers');
+          return;
+        }
+        
+        // Create success table structure
+        successTableContainer = document.createElement('div');
+        successTableContainer.className = 'results-table-container';
+        successTableContainer.id = 'successTableContainer';
+        
+        const tableWrapper = document.createElement('div');
+        tableWrapper.className = 'table-wrapper';
+        
+        successTable = document.createElement('table');
+        successTable.className = 'results-table';
+        successTable.id = 'successTable';
+        
+        // Clone the header from failed table
+        const failedTable = document.querySelector('#failedTable');
+        if (failedTable) {
+          const thead = failedTable.querySelector('thead');
+          if (thead) {
+            const newThead = thead.cloneNode(true);
+            // Remove validation errors column from success table
+            const headers = newThead.querySelectorAll('th');
+            headers.forEach((th) => {
+              if (th.textContent.trim() === 'Validation Errors') {
+                th.remove();
+              }
+            });
+            successTable.appendChild(newThead);
+          }
+        }
+        
+        const tbody = document.createElement('tbody');
+        successTable.appendChild(tbody);
+        tableWrapper.appendChild(successTable);
+        successTableContainer.appendChild(tableWrapper);
+        
+        // Insert before failed table
+        failedTableContainer.parentNode.insertBefore(successTableContainer, failedTableContainer);
+        
+        // Create navigation bar for success table
+        const successNavBar = document.createElement('div');
+        successNavBar.className = 'results-nav-bar';
+        successNavBar.innerHTML = `
+          <div class="nav-breadcrumb">
+            <span>record</span>
+            <span class="separator">></span>
+            <span>csv</span>
+            <span class="separator">></span>
+            <span class="success-count-display">1 records</span>
+          </div>
+          <div class="nav-actions">
+            <button class="download-all-btn" onclick="downloadAllRecords()" title="Download all records as CSV">📥 Download All</button>
+            <span class="nav-separator">|</span>
+            <button class="nav-icon-btn" title="Refresh" onclick="location.reload()">🔄</button>
+            <button class="nav-icon-btn" title="View">👁️</button>
+            <span class="nav-separator">|</span>
+            <button class="nav-icon-btn" title="Search">🔍</button>
+            <button class="nav-icon-btn" title="Add">➕</button>
+            <button class="nav-icon-btn" title="Delete">🗑️</button>
+          </div>
+        `;
+        successTableContainer.parentNode.insertBefore(successNavBar, successTableContainer);
+      }
+      
+      const successTbody = successTable.querySelector('tbody');
+      if (!successTbody) {
+        console.error('Success table body not found');
+        return;
+      }
+      
+      // Preserve the record ID
+      const recordId = row.getAttribute('data-record-id');
+      
+      // Clone the row with all attributes
+      const newRow = row.cloneNode(true);
+      
+      // Remove validation errors column from the new row
+      const validationCell = newRow.querySelector('td.validation-errors');
+      if (validationCell) {
+        validationCell.remove();
+      }
+      
+      // Preserve record ID
+      if (recordId) {
+        newRow.setAttribute('data-record-id', recordId);
+      }
+      
+      // Update the save button state
+      const saveBtn = newRow.querySelector('.save-row-btn');
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Save';
+        saveBtn.style.background = '';
+      }
+      
+      // Remove edited class and invalid-field class from all cells
+      newRow.querySelectorAll('.editable-cell').forEach(cell => {
+        cell.classList.remove('edited', 'invalid-field');
+      });
+      
+      // Remove the row from failed table
+      row.remove();
+      
+      // Add to success table
+      successTbody.appendChild(newRow);
+      
+      // Re-initialize editable cells and drag handlers for the new row
+      initializeEditableCellsForRow(newRow);
+      
+      // Re-initialize drag and drop for the new row
+      const dragHandle = newRow.querySelector('.table-drag-handle');
+      if (dragHandle) {
+        dragHandle.setAttribute('draggable', 'true');
+      }
+      
+      // Update counts
+      updateRecordCounts();
+      
+      // Show success message
+      const message = document.createElement('div');
+      message.style.cssText = 'position:fixed;top:20px;right:20px;background:#28a745;color:white;padding:12px 20px;border-radius:6px;z-index:9999;box-shadow:0 4px 6px rgba(0,0,0,0.1);';
+      message.textContent = '✓ Record moved to successful records!';
+      document.body.appendChild(message);
+      setTimeout(() => {
+        message.style.transition = 'opacity 0.5s';
+        message.style.opacity = '0';
+        setTimeout(() => message.remove(), 500);
+      }, 3000);
+    }
+    
+    function initializeEditableCellsForRow(row) {
+      const cells = row.querySelectorAll('.editable-cell[contenteditable="true"]');
+      cells.forEach(cell => {
+        cell.addEventListener('input', function() {
+          const row = this.closest('tr');
+          const saveBtn = row.querySelector('.save-row-btn');
+          if (saveBtn) {
+            saveBtn.disabled = false;
+            this.classList.add('edited');
+          }
+        });
+      });
+    }
+    
+    function updateRecordCounts() {
+      const successRows = document.querySelectorAll('#successTable tbody tr.draggable-row').length;
+      const failedRows = document.querySelectorAll('#failedTable tbody tr.draggable-row').length;
+      
+      // Update success count in navigation bars
+      const successCountElements = document.querySelectorAll('.nav-breadcrumb span');
+      successCountElements.forEach(el => {
+        if (el.textContent.includes('records') && !el.textContent.includes('failed')) {
+          el.textContent = successRows + ' records';
+        }
+      });
+      
+      // Update failed count in navigation bars
+      const failedCountElements = document.querySelectorAll('.nav-breadcrumb span');
+      failedCountElements.forEach(el => {
+        if (el.textContent.includes('failed records')) {
+          el.textContent = failedRows + ' failed records';
+        }
+      });
+      
+      // Update pagination counts
+      const successPaginationInput = document.querySelector('#successTableContainer .pagination-input[readonly]');
+      if (successPaginationInput && successPaginationInput.value.includes('rows')) {
+        successPaginationInput.value = successRows + ' rows';
+      }
+      
+      const failedPaginationInput = document.querySelector('#failedTableContainer .pagination-input[readonly]');
+      if (failedPaginationInput && failedPaginationInput.value.includes('rows')) {
+        failedPaginationInput.value = failedRows + ' rows';
+      }
+      
+      // Hide failed table section if no failed records
+      const failedTableContainer = document.querySelector('#failedTableContainer');
+      const failedNavBar = document.querySelector('.failed-nav');
+      if (failedRows === 0) {
+        if (failedTableContainer) failedTableContainer.style.display = 'none';
+        if (failedNavBar) failedNavBar.style.display = 'none';
+      } else {
+        if (failedTableContainer) failedTableContainer.style.display = '';
+        if (failedNavBar) failedNavBar.style.display = '';
+      }
+    }
+    
+    // Show save notification
+    function showSaveNotification(message) {
+      // Remove any existing notification
+      const existing = document.querySelector('.save-notification');
+      if (existing) {
+        existing.remove();
+      }
+      
+      const notification = document.createElement('div');
+      notification.className = 'save-notification';
+      notification.style.cssText = 'position:fixed;top:20px;right:20px;background:#28a745;color:white;padding:12px 20px;border-radius:6px;z-index:9999;box-shadow:0 4px 6px rgba(0,0,0,0.1);font-size:14px;';
+      notification.textContent = '✓ ' + message;
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        notification.style.transition = 'opacity 0.5s';
+        notification.style.opacity = '0';
+        setTimeout(() => notification.remove(), 500);
+      }, 3000);
+    }
+
+    function showErrorTooltip(element) {
+      const errors = element.getAttribute('data-errors');
+      if (!errors) return;
+      
+      const errorList = errors.split('|');
+      const tooltip = element.nextElementSibling;
+      if (!tooltip || !tooltip.classList.contains('error-tooltip')) return;
+      
+      const ul = tooltip.querySelector('ul');
+      ul.innerHTML = '';
+      errorList.forEach(error => {
+        const li = document.createElement('li');
+        li.textContent = error;
+        ul.appendChild(li);
+      });
+      
+      // Position tooltip
+      const rect = element.getBoundingClientRect();
+      tooltip.style.position = 'fixed';
+      tooltip.style.top = (rect.bottom + 5) + 'px';
+      tooltip.style.left = rect.left + 'px';
+      tooltip.classList.add('show');
+    }
+    
+    function hideErrorTooltip(element) {
+      const tooltip = element.nextElementSibling;
+      if (tooltip && tooltip.classList.contains('error-tooltip')) {
+        tooltip.classList.remove('show');
+      }
+    }
+
+    function downloadAllRecords() {
+      // Get headers from the first table with data
+      const firstTable = document.querySelector('.results-table');
+      if (!firstTable) {
+        alert('No records to download');
+        return;
+      }
+      
+      // Get header order from data-field attributes of the first row
+      const firstRow = firstTable.querySelector('tbody tr.draggable-row');
+      if (!firstRow) {
+        alert('No records to download');
+        return;
+      }
+      
+      const headerCells = firstRow.querySelectorAll('.editable-cell[data-field]');
+      const headers = [];
+      headerCells.forEach(cell => {
+        headers.push(cell.getAttribute('data-field'));
+      });
+      
+      if (headers.length === 0) {
+        alert('No data fields found');
+        return;
+      }
+      
+      // Get all data rows from both success and failed tables
+      const allRows = document.querySelectorAll('.results-table tbody tr.draggable-row');
+      const rows = [];
+      
+      allRows.forEach(row => {
+        const cells = row.querySelectorAll('.editable-cell[data-field]');
+        const rowData = [];
+        
+        // Ensure we get data in the same order as headers
+        headers.forEach(header => {
+          let value = '';
+          cells.forEach(cell => {
+            if (cell.getAttribute('data-field') === header) {
+              value = cell.textContent.trim();
+            }
+          });
+          rowData.push(value);
+        });
+        
+        if (rowData.length > 0) {
+          rows.push(rowData);
+        }
+      });
+      
+      if (rows.length === 0) {
+        alert('No records to download');
+        return;
+      }
+      
+      // Create CSV content
+      let csvContent = headers.join(',') + '\n';
+      
+      rows.forEach(rowData => {
+        const escapedRow = rowData.map(v => {
+          // Escape values that contain commas, quotes, or newlines
+          if (v.includes(',') || v.includes('"') || v.includes('\n')) {
+            return '"' + v.replace(/"/g, '""') + '"';
+          }
+          return v;
+        }).join(',');
+        csvContent += escapedRow + '\n';
+      });
+      
+      // Create blob and download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+      link.setAttribute('download', 'all_records_' + timestamp + '.csv');
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+    
+    // Store chart instances globally for updates
+    let pieChartInstance = null;
+    let errorChartInstance = null;
+    let fieldErrorChartInstance = null;
+    
+    // Initialize graphs when results are available
+    function initializeGraphs() {
+      const successCount = /*[[${successCount != null ? successCount : 0}]]*/ 0;
+      const failedCount = /*[[${failedCount != null ? failedCount : 0}]]*/ 0;
+      
+      if (successCount === 0 && failedCount === 0) {
+        return; // No data to display
+      }
+      
+      // Pie Chart - Success vs Failed
+      const pieCtx = document.getElementById('pieChart');
+      if (pieCtx) {
+        // Destroy existing chart if it exists
+        if (pieChartInstance) {
+          pieChartInstance.destroy();
+        }
+        pieChartInstance = new Chart(pieCtx, {
+          type: 'doughnut',
+          data: {
+            labels: ['✅ Successful', '❌ Failed'],
+            datasets: [{
+              data: [successCount, failedCount],
+              backgroundColor: ['#96A78D', '#dc3545'],
+              borderColor: ['#fff', '#fff'],
+              borderWidth: 4,
+              hoverOffset: 8
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: {
+              animateRotate: true,
+              animateScale: true,
+              duration: 1500,
+              easing: 'easeOutQuart'
+            },
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: {
+                  padding: 20,
+                  font: {
+                    size: 14,
+                    weight: '600',
+                    family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+                  },
+                  usePointStyle: true,
+                  pointStyle: 'circle'
+                }
+              },
+              tooltip: {
+                backgroundColor: 'rgba(0,0,0,0.8)',
+                padding: 12,
+                titleFont: {
+                  size: 14,
+                  weight: 'bold'
+                },
+                bodyFont: {
+                  size: 13
+                },
+                callbacks: {
+                  label: function(context) {
+                    const label = context.label || '';
+                    const value = context.parsed || 0;
+                    const total = successCount + failedCount;
+                    const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                    return label + ': ' + value + ' records (' + percentage + '%)';
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
+      
+      // Update graphs with initial counts
+      updateGraphsWithCounts(successCount, failedCount);
+      
+      // Analyze validation errors (only on initial load)
+      const validationErrors = /*[[${validationErrors}]]*/ {};
+      const initialFailedCount = /*[[${failedCount != null ? failedCount : 0}]]*/ 0;
+      if (initialFailedCount > 0 && validationErrors) {
+        // Count error frequencies
+        const errorCounts = {};
+        const fieldErrorCounts = {};
+        
+        Object.values(validationErrors).forEach(errorList => {
+          if (Array.isArray(errorList)) {
+            errorList.forEach(error => {
+              // Count error types
+              errorCounts[error] = (errorCounts[error] || 0) + 1;
+              
+              // Extract field name from error message
+              const fieldMatch = error.match(/([A-Za-z\s]+)\s+(is required|must not be|must be|must contain)/);
+              if (fieldMatch) {
+                const field = fieldMatch[1].trim();
+                fieldErrorCounts[field] = (fieldErrorCounts[field] || 0) + 1;
+              } else {
+                // Try alternative patterns
+                if (error.includes('Student ID')) fieldErrorCounts['Student ID'] = (fieldErrorCounts['Student ID'] || 0) + 1;
+                else if (error.includes('First Name')) fieldErrorCounts['First Name'] = (fieldErrorCounts['First Name'] || 0) + 1;
+                else if (error.includes('Last Name')) fieldErrorCounts['Last Name'] = (fieldErrorCounts['Last Name'] || 0) + 1;
+                else if (error.includes('Middle Name')) fieldErrorCounts['Middle Name'] = (fieldErrorCounts['Middle Name'] || 0) + 1;
+                else if (error.includes('Gender')) fieldErrorCounts['Gender'] = (fieldErrorCounts['Gender'] || 0) + 1;
+                else if (error.includes('Date of Birth')) fieldErrorCounts['Date of Birth'] = (fieldErrorCounts['Date of Birth'] || 0) + 1;
+                else if (error.includes('Email')) fieldErrorCounts['Email Address'] = (fieldErrorCounts['Email Address'] || 0) + 1;
+                else if (error.includes('Age')) fieldErrorCounts['Age'] = (fieldErrorCounts['Age'] || 0) + 1;
+                else if (error.includes('Contact')) fieldErrorCounts['Contact Number'] = (fieldErrorCounts['Contact Number'] || 0) + 1;
+                else if (error.includes('Nationality')) fieldErrorCounts['Nationality'] = (fieldErrorCounts['Nationality'] || 0) + 1;
+              }
+            });
+          }
+        });
+        
+        // Top Validation Errors Chart
+        const errorCtx = document.getElementById('errorChart');
+        if (errorCtx && Object.keys(errorCounts).length > 0) {
+          // Sort errors by frequency and get top 8
+          const sortedErrors = Object.entries(errorCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 8);
+          
+          // Destroy existing chart if it exists
+          if (errorChartInstance) {
+            errorChartInstance.destroy();
+          }
+          errorChartInstance = new Chart(errorCtx, {
+            type: 'bar',
+            data: {
+              labels: sortedErrors.map(e => e[0].length > 35 ? e[0].substring(0, 35) + '...' : e[0]),
+              datasets: [{
+                label: 'Error Count',
+                data: sortedErrors.map(e => e[1]),
+                backgroundColor: function(context) {
+                  const value = context.parsed.x;
+                  const max = Math.max(...sortedErrors.map(e => e[1]));
+                  const ratio = value / max;
+                  if (ratio > 0.7) return '#dc3545';
+                  if (ratio > 0.4) return '#ff9800';
+                  return '#ffc107';
+                },
+                borderColor: '#c82333',
+                borderWidth: 2,
+                borderRadius: 8,
+                borderSkipped: false
+              }]
+            },
+            options: {
+              indexAxis: 'y',
+              responsive: true,
+              maintainAspectRatio: false,
+              animation: {
+                duration: 1200,
+                easing: 'easeOutQuart'
+              },
+              scales: {
+                x: {
+                  beginAtZero: true,
+                  ticks: {
+                    stepSize: 1,
+                    font: { size: 11 }
+                  },
+                  grid: { color: 'rgba(0,0,0,0.1)' }
+                },
+                y: {
+                  ticks: {
+                    font: { size: 11 }
+                  },
+                  grid: { display: false }
+                }
+              },
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  callbacks: {
+                    title: function(context) {
+                      const fullLabel = sortedErrors[context[0].dataIndex][0];
+                      return fullLabel.length > 40 ? fullLabel.substring(0, 40) + '...' : fullLabel;
+                    },
+                    label: function(context) {
+                      return 'Occurrences: ' + context.parsed.x;
+                    }
+                  }
+                }
+              }
+            }
+          });
+        }
+        
+        // Field Error Analysis Chart
+        const fieldCtx = document.getElementById('fieldErrorChart');
+        if (fieldCtx && Object.keys(fieldErrorCounts).length > 0) {
+          const sortedFields = Object.entries(fieldErrorCounts)
+            .sort((a, b) => b[1] - a[1]);
+          
+          // Destroy existing chart if it exists
+          if (fieldErrorChartInstance) {
+            fieldErrorChartInstance.destroy();
+          }
+          fieldErrorChartInstance = new Chart(fieldCtx, {
+            type: 'bar',
+            data: {
+              labels: sortedFields.map(f => f[0]),
+              datasets: [{
+                label: 'Errors per Field',
+                data: sortedFields.map(f => f[1]),
+                backgroundColor: function(context) {
+                  const value = context.parsed.y;
+                  const max = Math.max(...sortedFields.map(f => f[1]));
+                  const ratio = value / max;
+                  if (ratio > 0.7) return '#dc3545';
+                  if (ratio > 0.4) return '#ff9800';
+                  return '#17a2b8';
+                },
+                borderColor: '#333',
+                borderWidth: 2,
+                borderRadius: 8,
+                borderSkipped: false
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              animation: {
+                duration: 1200,
+                easing: 'easeOutQuart'
+              },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  ticks: {
+                    stepSize: 1,
+                    font: { size: 12 }
+                  },
+                  grid: { color: 'rgba(0,0,0,0.1)' }
+                },
+                x: {
+                  ticks: {
+                    font: { size: 11 }
+                  },
+                  grid: { display: false }
+                }
+              },
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      return context.parsed.y + ' error(s) in ' + context.label;
+                    }
+                  }
+                }
+              }
+            }
+          });
+        }
+      }
+    }
+    
+    // Update graphs with new counts
+    function updateGraphsWithCounts(successCount, failedCount) {
+      const total = successCount + failedCount;
+      
+      // Update summary cards using IDs
+      const successCountEl = document.getElementById('successCount');
+      const failedCountEl = document.getElementById('failedCount');
+      const totalCountEl = document.getElementById('totalCount');
+      const successPercentEl = document.getElementById('successPercent');
+      const failedPercentEl = document.getElementById('failedPercent');
+      const successPercentDiv = document.getElementById('successPercentDiv');
+      const failedPercentDiv = document.getElementById('failedPercentDiv');
+      
+      // Update counts
+      if (successCountEl) {
+        successCountEl.textContent = successCount;
+      }
+      if (failedCountEl) {
+        failedCountEl.textContent = failedCount;
+      }
+      if (totalCountEl) {
+        totalCountEl.textContent = total;
+      }
+      
+      // Update percentages
+      if (successPercentEl && total > 0) {
+        successPercentEl.textContent = ((successCount / total) * 100).toFixed(1);
+        if (successPercentDiv) {
+          successPercentDiv.style.display = 'block';
+        }
+      }
+      
+      if (failedPercentEl && total > 0) {
+        failedPercentEl.textContent = ((failedCount / total) * 100).toFixed(1);
+        if (failedPercentDiv) {
+          failedPercentDiv.style.display = 'block';
+        }
+      }
+      
+      // Update pie chart
+      if (pieChartInstance) {
+        pieChartInstance.data.datasets[0].data = [successCount, failedCount];
+        pieChartInstance.update();
+      }
+    }
+    
+    // Update graphs with statistics object
+    function updateGraphsWithStats(stats) {
+      const successCount = stats.successCount || 0;
+      const failedCount = stats.failedCount || 0;
+      updateGraphsWithCounts(successCount, failedCount);
+    }
+    
+    // Fetch file statistics and update graphs
+    function fetchFileStatsAndUpdate(fileId) {
+      if (!fileId) return;
+      fetch('/api/csv/file/' + fileId + '/stats')
+        .then(response => response.json())
+        .then(result => {
+          if (result.success && result.stats) {
+            updateGraphsWithStats(result.stats);
+            updateHistoryPageStats(fileId, result.stats);
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching stats:', error);
+        });
+    }
+    
+    // Update history page statistics (if history page is open in another tab/window)
+    function updateHistoryPageStats(fileId, stats) {
+      if (!fileId || !stats) return;
+      // Try to update via localStorage event so other tabs can listen
+      const event = new CustomEvent('csvStatsUpdated', {
+        detail: { fileId: fileId, stats: stats }
+      });
+      window.dispatchEvent(event);
+      
+      // Also store in localStorage for cross-tab communication
+      try {
+        localStorage.setItem('csvStats_' + fileId, JSON.stringify(stats));
+        localStorage.setItem('csvStatsUpdated', Date.now().toString());
+      } catch (e) {
+        console.warn('Could not update localStorage:', e);
+      }
+    }
+    
+    // Download individual chart as PNG
+    function downloadChart(canvasId, filename) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) {
+        alert('Chart not found');
+        return;
+      }
+      
+      // Get the chart container for better quality
+      const container = canvas.closest('.chart-container');
+      if (container && typeof html2canvas !== 'undefined') {
+        html2canvas(container, {
+          backgroundColor: '#ffffff',
+          scale: 2,
+          logging: false,
+          useCORS: true
+        }).then(function(canvas) {
+          const link = document.createElement('a');
+          link.download = filename + '-' + new Date().toISOString().split('T')[0] + '.png';
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+        });
+      } else {
+        // Fallback: use Chart.js export
+        const link = document.createElement('a');
+        link.download = filename + '-' + new Date().toISOString().split('T')[0] + '.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      }
+    }
+    
+    // Download all charts as a single image
+    function downloadAllCharts() {
+      const graphSection = document.querySelector('.graph-section');
+      if (!graphSection) {
+        alert('No charts to download');
+        return;
+      }
+      
+      if (typeof html2canvas === 'undefined') {
+        alert('Download feature is loading. Please try again in a moment.');
+        return;
+      }
+      
+      // Show loading indicator
+      const btn = event.target;
+      const originalText = btn.textContent;
+      btn.textContent = '⏳ Generating...';
+      btn.disabled = true;
+      
+      html2canvas(graphSection, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        logging: false,
+        useCORS: true,
+        height: graphSection.scrollHeight,
+        width: graphSection.scrollWidth
+      }).then(function(canvas) {
+        const link = document.createElement('a');
+        link.download = 'Extraction-Results-Analytics-' + new Date().toISOString().split('T')[0] + '.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        
+        // Restore button
+        btn.textContent = originalText;
+        btn.disabled = false;
+      }).catch(function(error) {
+        console.error('Error generating image:', error);
+        alert('Error generating download. Please try again.');
+        btn.textContent = originalText;
+        btn.disabled = false;
+      });
+    }
+    
+    // Initialize graphs when page loads
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(initializeGraphs, 100);
+      });
+    } else {
+      setTimeout(initializeGraphs, 100);
+    }
+    /*]]>*/
+  </script>
+
+</body>
+</html>

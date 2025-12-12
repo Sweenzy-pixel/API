@@ -1,12 +1,14 @@
-
+/* ===== Global Body Styles ===== */
 body {
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-    background: #f9f9f9;
+    background: linear-gradient(135deg, #96A78D 0%, #B6CEB4 100%);
     margin: 0;
     padding: 0;
-    overflow-y: auto; 
+    overflow-y: auto;
+    min-height: 100vh;
+}
 
-
+/* ===== Sidebar Styles ===== */
 .sidebar {
     height: 100%;
     width: 0;
@@ -14,23 +16,28 @@ body {
     z-index: 1000;
     top: 0;
     left: 0;
-    background-color: #333;
+    background: linear-gradient(180deg, #3C4A3E 0%, #2a342c 100%);
     overflow-x: hidden;
-    transition: 0.3s;
+    transition: width 0.3s ease-in-out;
     padding-top: 60px;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.3);
 }
 
 .sidebar a {
-    padding: 12px 20px;
+    padding: 15px 25px;
     text-decoration: none;
-    font-size: 18px;
+    font-size: 16px;
     color: #f1f1f1;
     display: block;
-    transition: 0.2s;
+    transition: all 0.3s ease;
+    border-left: 3px solid transparent;
 }
 
 .sidebar a:hover {
-    background-color: #575757;
+    background-color: rgba(150, 167, 141, 0.2);
+    border-left-color: #96A78D;
+    padding-left: 30px;
+    transform: translateX(5px);
 }
 
 .sidebar .closebtn {
@@ -40,55 +47,99 @@ body {
     font-size: 32px;
     color: white;
     cursor: pointer;
+    transition: transform 0.3s ease;
 }
 
-/* Hamburger menu button */
+.sidebar .closebtn:hover {
+    transform: rotate(90deg);
+}
+
+/* ===== Hamburger Menu Button ===== */
 .menu-btn {
     font-size: 28px;
     cursor: pointer;
     margin: 12px;
     color: #333;
     display: inline-block;
+    transition: transform 0.3s ease;
+    padding: 8px;
+    border-radius: 4px;
 }
 
-/* News container */
+.menu-btn:hover {
+    transform: scale(1.1);
+    background: rgba(255,255,255,0.1);
+}
+
+/* ===== News Container ===== */
 .news-container {
-    margin: 20px auto;
-    max-width: 800px;
-    padding: 20px;
+    margin: 30px auto;
+    max-width: 1200px;
+    padding: 30px;
+    animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .news-container h2 {
-    margin-bottom: 16px;
+    margin-bottom: 24px;
     color: white;
     font-weight: bold;
+    font-size: 32px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    text-align: center;
 }
 
 .news-item {
-    background: #F0F0F0;
-    padding: 15px;
-    margin-bottom: 15px;
-    border-radius: 8px;
-    box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    padding: 25px;
+    margin-bottom: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    border: 1px solid rgba(150, 167, 141, 0.2);
+}
+
+.news-item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    border-color: #96A78D;
 }
 
 .news-item h3 {
-    margin: 0 0 8px 0;
-    color: #333;
+    margin: 0 0 12px 0;
+    color: #2c3e2d;
+    font-size: 20px;
+    font-weight: 600;
 }
 
 .news-item p {
-    margin: 0 0 6px 0;
+    margin: 0 0 10px 0;
     color: #555;
+    line-height: 1.6;
 }
 
 .news-item a {
     color: #96A78D;
     font-weight: bold;
     text-decoration: none;
+    transition: all 0.3s ease;
+    display: inline-block;
+    margin-top: 10px;
 }
 
 .news-item a:hover {
+    color: #7d8f75;
     text-decoration: underline;
+    transform: translateX(5px);
 }
 }
